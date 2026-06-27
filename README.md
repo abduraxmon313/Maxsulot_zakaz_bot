@@ -1,58 +1,136 @@
-# Telegram Commerce Platform (multi-tenant SaaS)
+# 🛍 Maxsulot Zakaz — Telegram Commerce Platform
 
-> Bitta kod bazasi orqali **cheksiz biznesni** Telegram'da sotuvga ulaydigan professional commerce platformasi.
-> Restoran, fast food, market, kiyim-kechak, gul do'koni, elektronika, dorixona — har qanday biznesga moslashadi.
+> Bitta kod bazasi orqali **istalgan biznesni** (dorixona, market, restoran, gul do'koni,
+> elektronika...) Telegram'da sotuvga ulaydigan platforma.
+> **3 ta bot + Telegram Mini App** — hammasi **bitta Railway serverida** ishlaydi.
 
-Bu repozitoriy hozircha **loyihalash (design) fazasida**. Kod yozishdan oldin butun mahsulot
-Product Manager / CTO darajasida tahlil qilindi: barcha modullar, foydalanuvchi oqimlari,
-buyurtma hayot sikli, real hayotdagi muammolar va ularning yechimlari, ma'lumotlar modeli
-va implementatsiya yo'l xaritasi hujjatlashtirildi.
+Do'konga oid hech narsa kodda yozilmagan: do'kon nomi, salom xabari, rasmi, valyuta,
+narxlar, mahsulotlar — **hammasi Super Admin tomonidan bot orqali sozlanadi.**
 
 ---
 
-## Tarkibi (komponentlar)
-
-Barchasi **bitta Railway serverida**, **bitta Node.js jarayonida** ishga tushadi:
+## 🧩 Komponentlar
 
 | Komponent | Vazifasi |
 |-----------|----------|
-| **Sotuv Bot** (Customer Bot) | Mijoz uchun kirish nuqtasi. Mini App'ni ochadi, buyurtma statuslari haqida xabar yuboradi. |
-| **Admin Bot** | Biznes egasi/operatori uchun. Buyurtmani qabul qiladi, tasdiqlaydi, statusni boshqaradi, mahsulot/ombor boshqaruvi. |
-| **Super Admin Bot** | Platforma egasi uchun. Bizneslarni ulaydi, o'chiradi, obunani boshqaradi, global statistika. |
-| **Telegram Mini Web App** | Uzum/Yandex Market darajasidagi xarid interfeysi. Katalog, savat, to'lov, buyurtma. |
-| **API + Realtime** | Mini App va botlar uchun yagona backend. Realtime yangilanishlar (narx, qoldiq, status). |
+| 🛒 **Sotuv bot** (`BOT_CUSTOMER_TOKEN`) | Mijoz uchun. `/start` → sozlanadigan salom + Mini App tugmasi, buyurtma statuslari. |
+| 👨‍💼 **Admin bot** (`BOT_ADMIN_TOKEN`) | Buyurtmalarni qabul/tasdiqlash, status boshqaruvi, mahsulot/kategoriya/ombor CRUD. |
+| 👑 **Super Admin bot** (`BOT_SUPERADMIN_TOKEN`) | Do'konni har biznesga moslash (nom, salom, rasm, valyuta, narxlar), analitika. |
+| 🌐 **Mini App** (FastAPI + statik) | Uzum/Yandex uslubidagi xarid interfeysi: katalog, qidiruv, savat, checkout, buyurtmalar. |
+
+Barchasi **bitta `uvicorn` jarayonida** ishlaydi: FastAPI server ko'tarilganda 3 bot
+`lifespan` ichida `polling` rejimida ishga tushadi (alohida service kerak emas).
 
 ---
 
-## Hujjatlar (loyiha tahlili)
+## ⚙️ Texnologiya
 
-To'liq tahlilni `docs/` ichidan o'qing — ketma-ketlik bo'yicha:
+- **Python 3.11** + **aiogram 3** (botlar)
+- **FastAPI + Uvicorn** (Mini App backend + API)
+- **SQLAlchemy 2.0 (async) + asyncpg** + **PostgreSQL**
+- **Mini App:** vanilla JS + CSS (build kerak emas), Telegram WebApp SDK
+- **Deploy:** Railway (NIXPACKS)
 
-1. [`docs/01-product-vision-and-scope.md`](docs/01-product-vision-and-scope.md) — Mahsulot vizyoni, qiymat taklifi, modullar.
-2. [`docs/02-architecture-and-techstack.md`](docs/02-architecture-and-techstack.md) — Arxitektura, texnologiya tanlovi, Railway deploy.
-3. [`docs/03-multi-tenancy-and-security.md`](docs/03-multi-tenancy-and-security.md) — Multi-tenancy, izolyatsiya, rollar, xavfsizlik.
-4. [`docs/04-user-flows.md`](docs/04-user-flows.md) — Customer, Admin, Operator, Courier, Super Admin oqimlari.
-5. [`docs/05-order-lifecycle.md`](docs/05-order-lifecycle.md) — Buyurtma hayot sikli (state machine) va bildirishnomalar.
-6. [`docs/06-edge-cases-and-resilience.md`](docs/06-edge-cases-and-resilience.md) — Real muammolar va ularning yechimlari.
-7. [`docs/07-data-model.md`](docs/07-data-model.md) — Ma'lumotlar bazasi modeli (PostgreSQL).
-8. [`docs/08-feature-catalog.md`](docs/08-feature-catalog.md) — To'liq imkoniyatlar katalogi.
-9. [`docs/09-implementation-roadmap.md`](docs/09-implementation-roadmap.md) — Fazalar va yo'l xaritasi.
+> Bu stek va patternlar IntizomAI loyihasidan o'rganildi (bitta jarayonda ko'p bot, `lifespan`,
+> idempotent migratsiyalar, `initData` HMAC xavfsizlik).
 
 ---
 
-## Texnologiya (qisqacha)
+## 🔐 Xavfsizlik
 
-- **Backend:** Node.js 22 + TypeScript, Fastify
-- **Telegram:** grammY (webhook rejimi, ko'p-bot routing)
-- **DB:** PostgreSQL + Prisma ORM (multi-tenant, `tenant_id` scoping)
-- **Mini App:** React + Vite + TypeScript + Tailwind CSS
-- **Realtime:** WebSocket / SSE + Postgres LISTEN/NOTIFY
-- **Deploy:** Railway (single service), GitHub orqali CI/CD
-
-To'liq asoslash uchun [`docs/02-architecture-and-techstack.md`](docs/02-architecture-and-techstack.md) ga qarang.
+- **Mini App auth:** Telegram `initData` **HMAC-SHA256** bilan tekshiriladi (Sotuv bot tokeni).
+  Boshqa odamning `telegram_id` sini qo'lda yuborib ma'lumot o'qish/o'zgartirish (IDOR) **to'siladi**.
+- **Rollar:** Admin/Super Admin botlarga faqat `ADMIN_IDS` / `SUPERADMIN_IDS` dagilar kiradi.
+- **Rate limiting**, **payload hajmi cheklovi**, **xavfsizlik header'lari** (XSS/clickjacking/CSP).
+- **Narx server tomonida** qayta hisoblanadi — mijoz yuborgan narxga ishonilmaydi.
+- **Atomik ombor**: `UPDATE ... WHERE stock >= qty` — oxirgi mahsulotni bir nechta odam
+  bir vaqtda olsa, faqat bittasiga muvaffaqiyat (race-condition himoyasi).
 
 ---
 
-## Holat
+## 🚀 Railway'da ishga tushirish
 
-🟡 **Design faza** — hujjatlar tayyor. Implementatsiya `docs/09-implementation-roadmap.md` bo'yicha bosqichma-bosqich boshlanadi.
+1. **PostgreSQL** plaginini qo'shing — `DATABASE_URL` avtomatik ulanadi.
+2. Quyidagi **muhit o'zgaruvchilari**ni qo'shing (`.env.example` ga qarang):
+
+   ```
+   BOT_CUSTOMER_TOKEN=...        # Sotuv bot tokeni (BotFather)
+   BOT_ADMIN_TOKEN=...           # Admin bot tokeni
+   BOT_SUPERADMIN_TOKEN=...      # Super Admin bot tokeni
+   SUPERADMIN_IDS=123456789      # do'kon egasi Telegram ID(lar)i, vergul bilan
+   ADMIN_IDS=                    # operator/admin ID(lar)i (ixtiyoriy)
+   WEBAPP_URL=https://<railway-domain>   # Mini App URL (Railway domeni)
+   ```
+   > `DATABASE_URL` Railway tomonidan avtomatik beriladi.
+   > `WEBAPP_URL` qo'yilmasa, Railway domeni (`RAILWAY_PUBLIC_DOMAIN`) avtomatik ishlatiladi.
+
+3. Railway `Procfile`/`railway.json` orqali ishga tushiradi:
+   `uvicorn webapp.app:app --host 0.0.0.0 --port $PORT`
+4. **BotFather**'da Sotuv bot uchun Mini App tugmasi avtomatik ishlaydi (`WEBAPP_URL`).
+   Qulaylik uchun BotFather → *Bot Settings → Menu Button* ga ham `WEBAPP_URL` ni qo'ying.
+
+---
+
+## 🖥 Lokal ishga tushirish
+
+```bash
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # qiymatlarni to'ldiring (lokal Postgres yoki DATABASE_URL)
+python start.py        # http://localhost:8000
+```
+
+> Lokalda Mini App'ni brauzerda sinash uchun `.env` da `STRICT_AUTH=false` qo'ying
+> (Telegram'siz `?telegram_id=...` bilan ishlaydi). **Productionda har doim `true`!**
+
+---
+
+## 📂 Loyiha tuzilishi
+
+```
+core/
+  config.py              # env sozlamalar, rollar, DATABASE_URL
+  database.py            # async engine + idempotent migratsiyalar + seed
+  models/                # Setting, User, Category, Product, Banner, Order...
+  services/              # settings, catalog, order (atomik+state machine), user, notify, i18n
+  bots/
+    registry.py          # ishlab turgan bot instansiyalari (botlararo xabar)
+    common.py            # DbSession middleware
+    customer/            # Sotuv bot
+    admin/               # Admin bot
+    superadmin/          # Super Admin bot
+webapp/
+  app.py                 # FastAPI + lifespan (3 botni ishga tushiradi)
+  security.py            # initData HMAC, rate limit, headerlar
+  routes/                # config, catalog, orders, image proxy
+  static/                # Mini App (index.html, styles.css, app.js)
+start.py                 # lokal kirish nuqtasi
+docs/                    # mahsulot dizayni va arxitektura hujjatlari
+```
+
+---
+
+## 🔄 Buyurtma hayot sikli
+
+`created → confirmed → preparing → on_way → delivered → completed`
+(+ `canceled` / `rejected` — ombor qoldig'i avtomatik qaytariladi)
+
+Har status o'zgarishida mijozga **Sotuv bot orqali avtomatik xabar** (uning tilida) yuboriladi.
+Yangi buyurtma kelganda **Admin botga** darhol bildirishnoma + tasdiqlash tugmalari boriladi.
+
+---
+
+## 📋 Qanday ishlatiladi
+
+1. **Super Admin bot** → `/start` → *Do'kon sozlamalari*: nom, salom xabari (UZ/RU/EN), rasm, valyuta, telefon, min summa, yetkazib berish narxi.
+2. **Admin bot** → *➕ Kategoriya* va *➕ Mahsulot* qo'shing (rasm bilan).
+3. **Sotuv bot** → mijoz `/start` bosadi → *🛍 Do'konni ochish* → Mini App'da xarid qiladi.
+4. Buyurtma **Admin bot**ga tushadi → tasdiqlanadi → status yangilanadi → mijoz xabar oladi.
+
+---
+
+## 📖 Hujjatlar
+
+Mahsulot dizayni, user-flow'lar, edge-case'lar va ma'lumotlar modeli: [`docs/`](docs/) papkasida.
+
+🟢 **Holat:** ishlaydigan MVP — 3 bot + Mini App + multi-til + sozlanuvchan do'kon.
