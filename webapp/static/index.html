@@ -4,10 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Do'kon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=3" />
+  <link rel="stylesheet" href="/static/styles.css?v=4" />
 </head>
 <body>
   <div id="splash" class="splash"><div class="spinner"></div></div>
@@ -17,12 +20,18 @@
     <section id="view-home" class="view active">
       <div class="home-head">
         <button class="address-bar" id="addressBar">
-          <span class="ab-ic">🏠</span>
-          <span class="ab-text"><b id="abTitle">Manzil qo'shing</b><small id="abSub">Yetkazib berish uchun manzil tanlang</small></span>
-          <span class="ab-chevron">▾</span>
+          <span class="ab-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V20h14V9.8"/></svg>
+          </span>
+          <span class="ab-text">
+            <span class="ab-label" id="abLabel">Yetkazib berish manzili</span>
+            <b id="abTitle">Manzil qo'shing
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </b>
+          </span>
         </button>
         <div class="search-box">
-          <span class="search-ic">🔍</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input type="text" id="searchInput" placeholder="Qidirish..." autocomplete="off" />
           <button class="search-clear" id="searchClear" hidden>✕</button>
         </div>
@@ -33,45 +42,42 @@
         <div id="categories" class="cat-strip"></div>
         <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
         <div id="products" class="grid"></div>
-        <div id="emptyProducts" class="empty" hidden>Mahsulot topilmadi 🛒</div>
+        <div id="emptyProducts" class="empty" hidden>Mahsulot topilmadi</div>
       </div>
     </section>
 
     <!-- SAVAT -->
     <section id="view-cart" class="view">
-      <h2 class="view-title">🛒 Savat</h2>
+      <h2 class="view-title">Savat</h2>
       <div id="cartItems" class="cart-items"></div>
-      <div id="cartEmpty" class="empty" hidden>Savat bo'sh 🛒</div>
+      <div id="cartEmpty" class="empty" hidden>Savat bo'sh</div>
       <div id="cartFooter" class="cart-footer"></div>
     </section>
 
     <!-- BUYURTMALAR -->
     <section id="view-orders" class="view">
-      <h2 class="view-title">📦 Buyurtmalarim</h2>
+      <h2 class="view-title">Buyurtmalarim</h2>
       <div id="ordersList" class="orders-list"></div>
-      <div id="emptyOrders" class="empty" hidden>Sizda hali buyurtmalar yo'q 📦</div>
+      <div id="emptyOrders" class="empty" hidden>Sizda hali buyurtmalar yo'q</div>
     </section>
 
     <!-- PROFIL -->
     <section id="view-profile" class="view">
-      <h2 class="view-title">👤 Profil</h2>
+      <h2 class="view-title">Profil</h2>
       <div id="profileContent"></div>
     </section>
   </main>
 
-  <!-- Mahsulot oynasi -->
   <div id="sheetProduct" class="sheet">
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card"><div class="sheet-handle"></div><div id="productContent"></div></div>
   </div>
 
-  <!-- Manzil oynasi (xarita + forma) -->
   <div id="sheetAddress" class="sheet">
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card tall"><div class="sheet-handle"></div><div id="addressContent"></div></div>
   </div>
 
-  <!-- Checkout oynasi -->
   <div id="sheetCheckout" class="sheet">
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card tall"><div class="sheet-handle"></div>
@@ -81,13 +87,25 @@
   </div>
 
   <nav class="bottom-nav">
-    <button class="nav-item active" data-nav="home"><span>🏠</span><small>Asosiy</small></button>
-    <button class="nav-item" data-nav="cart"><span>🛒</span><small>Savat</small><b id="cartBadge" class="badge" hidden>0</b></button>
-    <button class="nav-item" data-nav="orders"><span>📦</span><small>Buyurtmalar</small></button>
-    <button class="nav-item" data-nav="profile"><span>👤</span><small>Profil</small></button>
+    <button class="nav-item active" data-nav="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V20h14V9.8"/></svg>
+      <small>Asosiy</small>
+    </button>
+    <button class="nav-item" data-nav="cart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14l-1.2 11a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+      <small>Savat</small><b id="cartBadge" class="badge" hidden>0</b>
+    </button>
+    <button class="nav-item" data-nav="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></svg>
+      <small>Buyurtmalar</small>
+    </button>
+    <button class="nav-item" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>
+      <small>Profil</small>
+    </button>
   </nav>
 
   <div id="toast" class="toast"></div>
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>
