@@ -57,6 +57,7 @@ _tables_lock = asyncio.Lock()
 # ─────────────────────────────────────────────────────────────
 PRODUCT_NEW_COLUMNS = [
     ("old_price", "INTEGER"),
+    ("image_media_id", "INTEGER"),
     ("photo_url", "VARCHAR(512)"),
     ("rating", "DOUBLE PRECISION DEFAULT 0"),
     ("rating_count", "INTEGER DEFAULT 0"),
@@ -120,7 +121,7 @@ async def create_tables():
             return
         # Barcha modellarni import qilamiz — Base.metadata to'lishi uchun.
         from core.models import (  # noqa: F401
-            setting, user, category, product, banner, order,
+            setting, user, category, product, banner, order, media,
         )
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

@@ -24,6 +24,28 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "en": "⏰ The shop is currently closed. Hours: {hours}",
     },
 
+    # ── Onboarding (telefon ulashish) ──
+    "onboard_phone": {
+        "uz": "Assalomu alaykum! 👋\nBuyurtma berishni boshlash uchun telefon raqamingizni ulashing.",
+        "ru": "Здравствуйте! 👋\nЧтобы начать заказывать, поделитесь номером телефона.",
+        "en": "Welcome! 👋\nShare your phone number to start ordering.",
+    },
+    "btn_share_phone": {
+        "uz": "📱 Telefon raqamni ulashish",
+        "ru": "📱 Поделиться номером",
+        "en": "📱 Share phone number",
+    },
+    "onboard_need_contact": {
+        "uz": "Iltimos, pastdagi «📱 Telefon raqamni ulashish» tugmasini bosing.",
+        "ru": "Пожалуйста, нажмите кнопку «📱 Поделиться номером» ниже.",
+        "en": "Please tap the «📱 Share phone number» button below.",
+    },
+    "onboard_thanks": {
+        "uz": "Rahmat, {name}! ✅ Endi xarid qilishingiz mumkin.",
+        "ru": "Спасибо, {name}! ✅ Теперь вы можете делать покупки.",
+        "en": "Thank you, {name}! ✅ You can start shopping now.",
+    },
+
     # ── Buyurtma statuslari (mijozga) ──
     "status_created": {"uz": "🆕 Buyurtmangiz qabul qilindi", "ru": "🆕 Заказ принят", "en": "🆕 Order received"},
     "status_confirmed": {"uz": "✅ Buyurtmangiz tasdiqlandi", "ru": "✅ Заказ подтверждён", "en": "✅ Order confirmed"},

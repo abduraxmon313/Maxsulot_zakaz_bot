@@ -13,6 +13,15 @@ from core.config import WEBAPP_URL
 from core.services.i18n import t
 
 
+def contact_request(lang: str) -> ReplyKeyboardMarkup:
+    """Telefon raqamni ulashish tugmasi (onboarding)."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=t("btn_share_phone", lang), request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
 def main_menu(lang: str) -> ReplyKeyboardMarkup:
     rows: list[list[KeyboardButton]] = []
     # Mini App tugmasi faqat https URL bo'lganda WebApp sifatida qo'shiladi.

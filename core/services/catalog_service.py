@@ -84,6 +84,7 @@ async def create_product(
     description: str = "",
     stock: int = 0,
     image_file_id: str | None = None,
+    image_media_id: int | None = None,
     old_price: int | None = None,
 ) -> Product:
     product = Product(
@@ -93,6 +94,7 @@ async def create_product(
         description=(description or "").strip(),
         stock=int(stock),
         image_file_id=image_file_id,
+        image_media_id=image_media_id,
         old_price=old_price,
     )
     session.add(product)

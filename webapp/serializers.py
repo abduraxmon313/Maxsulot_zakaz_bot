@@ -3,8 +3,8 @@ from __future__ import annotations
 
 
 def product_image_url(product) -> str:
-    if product.image_file_id:
-        return f"/api/image/{product.image_file_id}"
+    if getattr(product, "image_media_id", None):
+        return f"/api/image/{product.image_media_id}"
     if product.photo_url:
         return product.photo_url
     return ""
@@ -33,8 +33,8 @@ def serialize_category(cat) -> dict:
 
 def serialize_banner(banner) -> dict:
     image = ""
-    if banner.image_file_id:
-        image = f"/api/image/{banner.image_file_id}"
+    if getattr(banner, "image_media_id", None):
+        image = f"/api/image/{banner.image_media_id}"
     elif banner.photo_url:
         image = banner.photo_url
     return {

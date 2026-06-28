@@ -23,6 +23,7 @@ class Product(Base):
     price: Mapped[int] = mapped_column(Integer, default=0)            # so'm
     old_price: Mapped[int | None] = mapped_column(Integer, nullable=True)  # chegirmadan oldingi
     image_file_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    image_media_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # Media.id (DB'dagi rasm)
     photo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     stock: Mapped[int] = mapped_column(Integer, default=0)            # ombordagi qoldiq
     rating: Mapped[float] = mapped_column(Float, default=0)

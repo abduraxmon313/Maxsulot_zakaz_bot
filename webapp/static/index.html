@@ -5,19 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/styles.css?v=2" />
 </head>
 <body>
-  <!-- Yuklanish ekrani -->
   <div id="splash" class="splash"><div class="spinner"></div></div>
 
-  <!-- Yuqori panel -->
   <header id="topbar" class="topbar">
     <div class="topbar-row">
       <div class="shop-title" id="shopTitle">Do'kon</div>
       <button class="lang-btn" id="langBtn">UZ</button>
     </div>
-    <div class="search-box" id="searchBox">
+    <div class="search-box">
       <span class="search-ic">🔍</span>
       <input type="text" id="searchInput" placeholder="Qidirish..." autocomplete="off" />
       <button class="search-clear" id="searchClear" hidden>✕</button>
@@ -25,7 +23,6 @@
   </header>
 
   <main id="app">
-    <!-- HOME -->
     <section id="view-home" class="view active">
       <div id="closedBanner" class="closed-banner" hidden>⏰ Do'kon hozir yopiq</div>
       <div id="banners" class="banners"></div>
@@ -35,7 +32,6 @@
       <div id="emptyProducts" class="empty" hidden>Mahsulot topilmadi 🛒</div>
     </section>
 
-    <!-- ORDERS -->
     <section id="view-orders" class="view">
       <h2 class="section-title">Buyurtmalarim</h2>
       <div id="ordersList" class="orders-list"></div>
@@ -43,16 +39,20 @@
     </section>
   </main>
 
-  <!-- Mahsulot pastki oynasi -->
+  <!-- Sticky savat paneli -->
+  <button id="cartBar" class="cart-bar" hidden>
+    <span class="cb-count" id="cbCount">0</span>
+    <span class="cb-text">Savatga o'tish</span>
+    <span class="cb-total" id="cbTotal">0</span>
+  </button>
+
+  <!-- Mahsulot oynasi -->
   <div id="sheetProduct" class="sheet">
     <div class="sheet-backdrop" data-close></div>
-    <div class="sheet-card">
-      <div class="sheet-handle"></div>
-      <div id="productContent"></div>
-    </div>
+    <div class="sheet-card"><div class="sheet-handle"></div><div id="productContent"></div></div>
   </div>
 
-  <!-- Savat pastki oynasi -->
+  <!-- Savat oynasi -->
   <div id="sheetCart" class="sheet">
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card tall">
@@ -64,7 +64,7 @@
     </div>
   </div>
 
-  <!-- Checkout pastki oynasi -->
+  <!-- Checkout oynasi -->
   <div id="sheetCheckout" class="sheet">
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card tall">
@@ -74,7 +74,6 @@
     </div>
   </div>
 
-  <!-- Pastki navigatsiya -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-nav="home"><span>🏠</span><small>Asosiy</small></button>
     <button class="nav-item" data-nav="search"><span>🔍</span><small>Qidiruv</small></button>
@@ -83,7 +82,6 @@
   </nav>
 
   <div id="toast" class="toast"></div>
-
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>

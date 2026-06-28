@@ -1,4 +1,12 @@
-"""Super Admin bot handlerlari: do'kon sozlamalari, analitika, holat."""
+"""
+Super Admin bot handlerlari.
+
+Super Admin: do'konni har biznesga moslaydi (nom, salom xabari/rasmi, valyuta,
+narxlar), KATEGORIYA va MAHSULOT qo'shadi/tahrirlaydi, analitikani ko'radi.
+
+MUHIM (rasm bug fix): yuklangan rasmlar darhol yuklab olinib, baytlari DB'ga
+(Media) saqlanadi — shuning uchun Mini App va Sotuv bot uni muammosiz ko'rsatadi.
+"""
 from __future__ import annotations
 
 import logging
@@ -12,11 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import WEBAPP_URL, is_superadmin
 from core.models.user import User
-from core.services import catalog_service, order_service, settings_service
+from core.services import catalog_service, media_service, order_service, settings_service
 from core.services.i18n import STATUS_LABELS
 from core.utils import fmt_money
 from core.bots.superadmin import keyboards as kb
-from core.bots.superadmin.states import EditSetting
+from core.bots.superadmin.states import (
+    AddCategory, AddProduct, EditPrice, EditSetting, EditStock,
+)
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -32,27 +42,32 @@ router.message.filter(IsSuperAdmin())
 router.callback_query.filter(IsSuperAdmin())
 
 
+async def _currency() -> str:
+    return await settings_service.get("currency", "so'm")
+
+
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     shop = await settings_service.get("shop_name", "Do'kon")
     await message.answer(
         f"👑 <b>Super Admin panel</b>\n🏪 {shop}\n\n"
-        "Bu yerdan do'koningizni har qanday biznesga moslang: nom, salom xabari, "
-        "rasm, valyuta, narxlar va h.k.",
+        "Do'koningizni istalgan biznesga moslang: nom, salom xabari, rasm, valyuta, "
+        "narxlar. Kategoriya va mahsulotlarni shu yerdan qo'shasiz.",
         reply_markup=kb.main_menu(),
     )
 
 
+# Bekor qilish — har qanday FSM holatdan chiqaradi (eng yuqori ustuvorlik).
 @router.message(F.text == kb.BTN_CANCEL)
 async def cancel(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Bekor qilindi.", reply_markup=kb.main_menu())
 
 
-# ─────────────────────────────────────────────────────────────
-#  Sozlamalar
-# ─────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════
+#  SOZLAMALAR
+# ═════════════════════════════════════════════════════════════
 @router.message(F.text == kb.BTN_SETTINGS)
 async def show_settings(message: Message):
     lines = ["⚙️ <b>Do'kon sozlamalari</b>\n", "O'zgartirish uchun tugmani bosing:\n"]
@@ -91,13 +106,18 @@ async def choose_setting(callback: CallbackQuery, state: FSMContext):
 
 
 @router.message(EditSetting.value, F.photo)
-async def save_setting_photo(message: Message, state: FSMContext):
+async def save_setting_photo(message: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
     key = data.get("key")
     if data.get("typ") != "image":
         await message.answer("Bu sozlama uchun rasm emas, matn kiriting.")
         return
-    await settings_service.set(key, message.photo[-1].file_id)
+    # Rasmni DB'ga (Media) saqlaymiz — keyin Sotuv bot ham ko'rsata oladi.
+    media = await media_service.save_from_telegram(session, message.bot, message.photo[-1].file_id)
+    if not media:
+        await message.answer("❗️ Rasmni saqlab bo'lmadi, qayta urinib ko'ring.")
+        return
+    await settings_service.set(key, str(media.id))
     await state.clear()
     await message.answer("✅ Rasm saqlandi.", reply_markup=kb.main_menu())
 
@@ -131,9 +151,211 @@ async def save_setting_text(message: Message, state: FSMContext):
     await message.answer(f"✅ Saqlandi: <b>{label}</b>", reply_markup=kb.main_menu())
 
 
-# ─────────────────────────────────────────────────────────────
-#  Do'kon ochiq/yopiq
-# ─────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════
+#  KATEGORIYA
+# ═════════════════════════════════════════════════════════════
+@router.message(F.text == kb.BTN_ADD_CATEGORY)
+async def add_category_start(message: Message, state: FSMContext):
+    await state.set_state(AddCategory.name)
+    await message.answer("Kategoriya nomini kiriting:", reply_markup=kb.cancel_menu())
+
+
+@router.message(AddCategory.name, F.text)
+async def add_category_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text.strip())
+    await state.set_state(AddCategory.emoji)
+    await message.answer("Emoji yuboring (yoki o'tkazib yuboring):", reply_markup=kb.skip_menu())
+
+
+@router.message(AddCategory.emoji, F.text)
+async def add_category_emoji(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    emoji = "🛍" if message.text == kb.BTN_SKIP else message.text.strip()[:8]
+    cat = await catalog_service.create_category(session, name=data["name"], emoji=emoji)
+    await state.clear()
+    await message.answer(f"✅ Kategoriya qo'shildi: {cat.emoji} {cat.name}", reply_markup=kb.main_menu())
+
+
+@router.message(F.text == kb.BTN_CATEGORIES)
+async def list_categories(message: Message, session: AsyncSession):
+    cats = await catalog_service.list_categories(session, only_active=False)
+    if not cats:
+        await message.answer("Kategoriyalar yo'q. ➕ Kategoriya tugmasi orqali qo'shing.")
+        return
+    lines = [f"{c.emoji} {c.name} {'🟢' if c.is_active else '🔴'}" for c in cats]
+    await message.answer("🗂 <b>Kategoriyalar:</b>\n\n" + "\n".join(lines))
+
+
+# ═════════════════════════════════════════════════════════════
+#  MAHSULOT QO'SHISH (FSM)
+# ═════════════════════════════════════════════════════════════
+@router.message(F.text == kb.BTN_ADD_PRODUCT)
+async def add_product_start(message: Message, state: FSMContext):
+    await state.set_state(AddProduct.name)
+    await message.answer("Mahsulot nomini kiriting:", reply_markup=kb.cancel_menu())
+
+
+@router.message(AddProduct.name, F.text)
+async def add_product_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text.strip())
+    await state.set_state(AddProduct.price)
+    await message.answer("Narxini kiriting (faqat raqam, so'mda):")
+
+
+@router.message(AddProduct.price, F.text)
+async def add_product_price(message: Message, state: FSMContext):
+    digits = "".join(ch for ch in message.text if ch.isdigit())
+    if not digits:
+        await message.answer("❗️ Narx faqat raqam bo'lsin. Qayta kiriting:")
+        return
+    await state.update_data(price=int(digits))
+    await state.set_state(AddProduct.stock)
+    await message.answer("Ombordagi qoldiq (soni)ni kiriting:")
+
+
+@router.message(AddProduct.stock, F.text)
+async def add_product_stock(message: Message, state: FSMContext, session: AsyncSession):
+    digits = "".join(ch for ch in message.text if ch.isdigit())
+    if not digits:
+        await message.answer("❗️ Qoldiq faqat raqam bo'lsin. Qayta kiriting:")
+        return
+    await state.update_data(stock=int(digits))
+    cats = await catalog_service.list_categories(session)
+    await state.set_state(AddProduct.category)
+    if cats:
+        await message.answer("Kategoriyani tanlang:", reply_markup=kb.categories_inline(cats))
+    else:
+        await state.update_data(category_id=None)
+        await state.set_state(AddProduct.photo)
+        await message.answer("Mahsulot rasmini yuboring (yoki o'tkazib yuboring):", reply_markup=kb.skip_menu())
+
+
+@router.callback_query(AddProduct.category, F.data.startswith("pcat:"))
+async def add_product_category(callback: CallbackQuery, state: FSMContext):
+    cat_id = int(callback.data.split(":")[1])
+    await state.update_data(category_id=cat_id or None)
+    await state.set_state(AddProduct.photo)
+    await callback.message.answer("Mahsulot rasmini yuboring (yoki o'tkazib yuboring):", reply_markup=kb.skip_menu())
+    await callback.answer()
+
+
+@router.message(AddProduct.photo, F.photo)
+async def add_product_photo(message: Message, state: FSMContext, session: AsyncSession):
+    # Rasmni DB'ga (Media) saqlaymiz — Mini App'da ko'rinadi.
+    media = await media_service.save_from_telegram(session, message.bot, message.photo[-1].file_id)
+    await _finish_product(message, state, session, image_media_id=(media.id if media else None))
+
+
+@router.message(AddProduct.photo, F.text)
+async def add_product_photo_skip(message: Message, state: FSMContext, session: AsyncSession):
+    await _finish_product(message, state, session, image_media_id=None)
+
+
+async def _finish_product(message, state, session, image_media_id):
+    data = await state.get_data()
+    product = await catalog_service.create_product(
+        session,
+        name=data["name"],
+        price=data["price"],
+        category_id=data.get("category_id"),
+        stock=data.get("stock", 0),
+        image_media_id=image_media_id,
+    )
+    await state.clear()
+    currency = await _currency()
+    img_note = "🖼 rasm bilan" if image_media_id else "🚫 rasmsiz"
+    await message.answer(
+        f"✅ Mahsulot qo'shildi ({img_note}):\n<b>{product.name}</b> — "
+        f"{fmt_money(product.price, currency)}\nQoldiq: {product.stock}",
+        reply_markup=kb.main_menu(),
+    )
+
+
+# ═════════════════════════════════════════════════════════════
+#  MAHSULOTLAR RO'YXATI VA TAHRIRLASH
+# ═════════════════════════════════════════════════════════════
+@router.message(F.text == kb.BTN_PRODUCTS)
+async def list_products(message: Message, session: AsyncSession):
+    products = await catalog_service.list_products(session, only_active=False, limit=40)
+    if not products:
+        await message.answer("Mahsulotlar yo'q. ➕ Mahsulot tugmasi orqali qo'shing.")
+        return
+    currency = await _currency()
+    for p in products:
+        flag = "🟢" if (p.is_active and p.deleted_at is None) else "🔴"
+        img = "🖼" if p.image_media_id else "🚫"
+        await message.answer(
+            f"{flag} <b>{p.name}</b>\n💰 {fmt_money(p.price, currency)} | 📦 {p.stock} dona | {img}",
+            reply_markup=kb.product_card(p.id),
+        )
+
+
+@router.callback_query(F.data.startswith("pedit:"))
+async def product_edit(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    _, action, pid = callback.data.split(":")
+    pid = int(pid)
+    product = await catalog_service.get_product(session, pid)
+    if not product:
+        await callback.answer("Topilmadi.", show_alert=True)
+        return
+
+    if action == "price":
+        await state.set_state(EditPrice.value)
+        await state.update_data(product_id=pid)
+        await callback.message.answer(f"«{product.name}» uchun yangi narx (so'm):", reply_markup=kb.cancel_menu())
+        await callback.answer()
+    elif action == "stock":
+        await state.set_state(EditStock.value)
+        await state.update_data(product_id=pid)
+        await callback.message.answer(f"«{product.name}» uchun yangi qoldiq (soni):", reply_markup=kb.cancel_menu())
+        await callback.answer()
+    elif action == "toggle":
+        product.is_active = not product.is_active
+        await session.commit()
+        await callback.answer("🟢 Faol" if product.is_active else "🔴 Nofaol", show_alert=True)
+    elif action == "delete":
+        await catalog_service.soft_delete_product(session, pid)
+        await callback.answer("🗑 O'chirildi", show_alert=True)
+        try:
+            await callback.message.edit_text(f"🗑 <s>{product.name}</s> — o'chirildi")
+        except Exception:
+            pass
+
+
+@router.message(EditPrice.value, F.text)
+async def edit_price_value(message: Message, state: FSMContext, session: AsyncSession):
+    digits = "".join(ch for ch in message.text if ch.isdigit())
+    if not digits:
+        await message.answer("❗️ Faqat raqam kiriting:")
+        return
+    data = await state.get_data()
+    product = await catalog_service.get_product(session, data["product_id"])
+    if product:
+        product.price = int(digits)
+        await session.commit()
+    await state.clear()
+    currency = await _currency()
+    await message.answer(f"✅ Narx yangilandi: {fmt_money(int(digits), currency)}", reply_markup=kb.main_menu())
+
+
+@router.message(EditStock.value, F.text)
+async def edit_stock_value(message: Message, state: FSMContext, session: AsyncSession):
+    digits = "".join(ch for ch in message.text if ch.isdigit())
+    if not digits:
+        await message.answer("❗️ Faqat raqam kiriting:")
+        return
+    data = await state.get_data()
+    product = await catalog_service.get_product(session, data["product_id"])
+    if product:
+        product.stock = int(digits)
+        await session.commit()
+    await state.clear()
+    await message.answer(f"✅ Qoldiq yangilandi: {digits} dona", reply_markup=kb.main_menu())
+
+
+# ═════════════════════════════════════════════════════════════
+#  DO'KON OCHIQ/YOPIQ
+# ═════════════════════════════════════════════════════════════
 @router.message(F.text == kb.BTN_TOGGLE_OPEN)
 async def toggle_open(message: Message):
     is_open = await settings_service.get_bool("is_open", True)
@@ -143,9 +365,9 @@ async def toggle_open(message: Message):
     await message.answer(f"Do'kon holati: <b>{state_txt}</b>", reply_markup=kb.main_menu())
 
 
-# ─────────────────────────────────────────────────────────────
-#  Analitika
-# ─────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════
+#  ANALITIKA
+# ═════════════════════════════════════════════════════════════
 @router.message(F.text == kb.BTN_ANALYTICS)
 async def analytics(message: Message, session: AsyncSession):
     s = await order_service.stats_summary(session)
@@ -153,14 +375,13 @@ async def analytics(message: Message, session: AsyncSession):
     users = int((await session.execute(select(func.count(User.id)))).scalar() or 0)
     products = await catalog_service.count_active_products(session)
 
-    # Status bo'yicha taqsimot
     rows = (await session.execute(
         select(order_service.Order.status, func.count(order_service.Order.id))
         .group_by(order_service.Order.status)
     )).all()
     status_lines = [f"   {STATUS_LABELS.get(st, st)}: {cnt}" for st, cnt in rows]
 
-    text = (
+    await message.answer(
         "📊 <b>Analitika</b>\n\n"
         f"💰 Umumiy tushum: <b>{fmt_money(s['revenue'], currency)}</b>\n"
         f"📦 Jami buyurtmalar: {s['total_orders']}\n"
@@ -170,12 +391,11 @@ async def analytics(message: Message, session: AsyncSession):
         f"🛍 Faol mahsulotlar: {products}\n\n"
         "<b>Buyurtmalar holati bo'yicha:</b>\n" + ("\n".join(status_lines) or "   —")
     )
-    await message.answer(text)
 
 
-# ─────────────────────────────────────────────────────────────
-#  Tizim holati
-# ─────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════
+#  TIZIM HOLATI
+# ═════════════════════════════════════════════════════════════
 @router.message(F.text == kb.BTN_STATUS)
 async def system_status(message: Message):
     from core.bots import registry
