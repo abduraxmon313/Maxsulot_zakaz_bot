@@ -4,47 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Do'kon</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=2" />
+  <link rel="stylesheet" href="/static/styles.css?v=3" />
 </head>
 <body>
   <div id="splash" class="splash"><div class="spinner"></div></div>
 
-  <header id="topbar" class="topbar">
-    <div class="topbar-row">
-      <div class="shop-title" id="shopTitle">Do'kon</div>
-      <button class="lang-btn" id="langBtn">UZ</button>
-    </div>
-    <div class="search-box">
-      <span class="search-ic">🔍</span>
-      <input type="text" id="searchInput" placeholder="Qidirish..." autocomplete="off" />
-      <button class="search-clear" id="searchClear" hidden>✕</button>
-    </div>
-  </header>
-
   <main id="app">
+    <!-- ASOSIY -->
     <section id="view-home" class="view active">
-      <div id="closedBanner" class="closed-banner" hidden>⏰ Do'kon hozir yopiq</div>
-      <div id="banners" class="banners"></div>
-      <div id="categories" class="cat-strip"></div>
-      <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
-      <div id="products" class="grid"></div>
-      <div id="emptyProducts" class="empty" hidden>Mahsulot topilmadi 🛒</div>
+      <div class="home-head">
+        <button class="address-bar" id="addressBar">
+          <span class="ab-ic">🏠</span>
+          <span class="ab-text"><b id="abTitle">Manzil qo'shing</b><small id="abSub">Yetkazib berish uchun manzil tanlang</small></span>
+          <span class="ab-chevron">▾</span>
+        </button>
+        <div class="search-box">
+          <span class="search-ic">🔍</span>
+          <input type="text" id="searchInput" placeholder="Qidirish..." autocomplete="off" />
+          <button class="search-clear" id="searchClear" hidden>✕</button>
+        </div>
+      </div>
+      <div class="home-body">
+        <div id="closedBanner" class="closed-banner" hidden>⏰ Do'kon hozir yopiq</div>
+        <div id="banners" class="banners"></div>
+        <div id="categories" class="cat-strip"></div>
+        <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
+        <div id="products" class="grid"></div>
+        <div id="emptyProducts" class="empty" hidden>Mahsulot topilmadi 🛒</div>
+      </div>
     </section>
 
+    <!-- SAVAT -->
+    <section id="view-cart" class="view">
+      <h2 class="view-title">🛒 Savat</h2>
+      <div id="cartItems" class="cart-items"></div>
+      <div id="cartEmpty" class="empty" hidden>Savat bo'sh 🛒</div>
+      <div id="cartFooter" class="cart-footer"></div>
+    </section>
+
+    <!-- BUYURTMALAR -->
     <section id="view-orders" class="view">
-      <h2 class="section-title">Buyurtmalarim</h2>
+      <h2 class="view-title">📦 Buyurtmalarim</h2>
       <div id="ordersList" class="orders-list"></div>
       <div id="emptyOrders" class="empty" hidden>Sizda hali buyurtmalar yo'q 📦</div>
     </section>
-  </main>
 
-  <!-- Sticky savat paneli -->
-  <button id="cartBar" class="cart-bar" hidden>
-    <span class="cb-count" id="cbCount">0</span>
-    <span class="cb-text">Savatga o'tish</span>
-    <span class="cb-total" id="cbTotal">0</span>
-  </button>
+    <!-- PROFIL -->
+    <section id="view-profile" class="view">
+      <h2 class="view-title">👤 Profil</h2>
+      <div id="profileContent"></div>
+    </section>
+  </main>
 
   <!-- Mahsulot oynasi -->
   <div id="sheetProduct" class="sheet">
@@ -52,23 +65,16 @@
     <div class="sheet-card"><div class="sheet-handle"></div><div id="productContent"></div></div>
   </div>
 
-  <!-- Savat oynasi -->
-  <div id="sheetCart" class="sheet">
+  <!-- Manzil oynasi (xarita + forma) -->
+  <div id="sheetAddress" class="sheet">
     <div class="sheet-backdrop" data-close></div>
-    <div class="sheet-card tall">
-      <div class="sheet-handle"></div>
-      <h2 class="sheet-title">🛒 Savat</h2>
-      <div id="cartItems" class="cart-items"></div>
-      <div id="cartEmpty" class="empty" hidden>Savat bo'sh</div>
-      <div id="cartFooter" class="cart-footer"></div>
-    </div>
+    <div class="sheet-card tall"><div class="sheet-handle"></div><div id="addressContent"></div></div>
   </div>
 
   <!-- Checkout oynasi -->
   <div id="sheetCheckout" class="sheet">
     <div class="sheet-backdrop" data-close></div>
-    <div class="sheet-card tall">
-      <div class="sheet-handle"></div>
+    <div class="sheet-card tall"><div class="sheet-handle"></div>
       <h2 class="sheet-title">Buyurtmani rasmiylashtirish</h2>
       <div id="checkoutContent"></div>
     </div>
@@ -76,12 +82,12 @@
 
   <nav class="bottom-nav">
     <button class="nav-item active" data-nav="home"><span>🏠</span><small>Asosiy</small></button>
-    <button class="nav-item" data-nav="search"><span>🔍</span><small>Qidiruv</small></button>
-    <button class="nav-item cart-nav" data-nav="cart"><span>🛒</span><small>Savat</small><b id="cartBadge" class="badge" hidden>0</b></button>
+    <button class="nav-item" data-nav="cart"><span>🛒</span><small>Savat</small><b id="cartBadge" class="badge" hidden>0</b></button>
     <button class="nav-item" data-nav="orders"><span>📦</span><small>Buyurtmalar</small></button>
+    <button class="nav-item" data-nav="profile"><span>👤</span><small>Profil</small></button>
   </nav>
 
   <div id="toast" class="toast"></div>
-  <script src="/static/app.js?v=2"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>

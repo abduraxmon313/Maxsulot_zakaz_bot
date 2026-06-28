@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core.config import MAX_BODY_BYTES
-from webapp.routes import catalog, config as config_route, images, orders
+from webapp.routes import addresses, catalog, config as config_route, images, orders
 from webapp.security import rate_limited
 
 logging.basicConfig(
@@ -115,6 +115,7 @@ async def security_middleware(request: Request, call_next):
 app.include_router(config_route.router, prefix="/api")
 app.include_router(catalog.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
+app.include_router(addresses.router, prefix="/api")
 app.include_router(images.router, prefix="/api")
 
 # Statik fayllar (Mini App)

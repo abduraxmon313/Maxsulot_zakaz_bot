@@ -25,6 +25,7 @@ class OrderItemIn(BaseModel):
 class CreateOrderIn(BaseModel):
     items: list[OrderItemIn]
     delivery_type: str = "delivery"   # delivery | pickup
+    address_id: int | None = None     # saqlangan manzil (afzal)
     address: str | None = None
     lat: float | None = None
     lng: float | None = None
@@ -49,6 +50,18 @@ async def create_order(payload: CreateOrderIn, request: Request, session: AsyncS
     if payload.phone:
         await user_service.set_phone(session, telegram_id, payload.phone.strip()[:32])
 
+    # Manzil: saqlangan manzil (address_id) afzal; bo'lmasa yuborilgan matn/koordinata.
+    address_text = (payload.address or "").strip()[:512] or None
+    lat, lng = payload.lat, payload.lng
+    if payload.address_id:
+        from core.services import address_service
+        addr = await address_service.get(session, payload.address_id)
+        if not addr or addr.user_id != telegram_id:
+            raise HTTPException(status_code=400, detail="Manzil topilmadi.")
+        address_text = address_service.compose_text(addr)[:512]
+        if addr.lat is not None and addr.lng is not None:
+            lat, lng = addr.lat, addr.lng
+
     try:
         order = await order_service.create_order(
             session,
@@ -56,9 +69,9 @@ async def create_order(payload: CreateOrderIn, request: Request, session: AsyncS
             customer_name=customer_name,
             items=[it.model_dump() for it in payload.items],
             delivery_type=payload.delivery_type,
-            address=(payload.address or "").strip()[:512] or None,
-            lat=payload.lat,
-            lng=payload.lng,
+            address=address_text,
+            lat=lat,
+            lng=lng,
             phone=(payload.phone or "").strip()[:32] or None,
             payment_method=payload.payment_method,
             note=(payload.note or "").strip()[:500] or None,
