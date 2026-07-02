@@ -271,34 +271,90 @@ function openAddressSheet() {
   openSheet('sheetAddress');
 }
 function openMapStep() {
-  if (!window.L) { State._pickLat = null; State._pickLng = null; State._pickStreet = ''; openAddressForm(true); return; }
+  // Leaflet yuklanmagan bo'lsa — manual forma
+  if (!window.L) {
+    State._pickLat = null; State._pickLng = null; State._pickStreet = '';
+    openAddressForm(true);
+    return;
+  }
   el('addressContent').innerHTML = `
     <div class="map-step">
       <h2 class="sheet-title">${L('add_address_title')}</h2>
-      <div class="map-wrap" style="height:56vh"><div id="mapEl"></div><div class="map-pin" style="color:var(--primary)">${IC.mapPin}</div><button class="map-locate" id="locBtn" type="button">${IC.locate}</button></div>
+      <div class="map-wrap" id="mapWrap"><div id="mapEl"></div><div class="map-pin" style="color:var(--primary)">${IC.mapPin}</div><button class="map-locate" id="locBtn" type="button">${IC.locate}</button></div>
       <div class="map-hint">${L('map_hint')}</div>
       <button class="btn" id="mapContinue">${L('continue')}</button>
     </div>`;
   openSheet('sheetAddress');
-  // Xaritani har safar QAYTA yaratamiz (eski DOM'ga bog'lanib qolmasligi uchun).
-  requestAnimationFrame(() => setTimeout(initMap, 60));
   el('locBtn').onclick = locateMe;
   el('mapContinue').onclick = () => {
     let lat = TASHKENT.lat, lng = TASHKENT.lng;
-    if (State._map) { const c = State._map.getCenter(); lat = c.lat; lng = c.lng; }
+    if (State._map) { const c = State._map.getCenter(); lat = +c.lat.toFixed(7); lng = +c.lng.toFixed(7); }
     State._pickLat = lat; State._pickLng = lng; State._pickStreet = '';
     openAddressForm(false);
     reverseGeocode(lat, lng).then(s => { const inp = el('afStreet'); if (s && inp && !inp.value) inp.value = s; });
   };
+  // Sheet animatsiyasi tugagandan keyin xaritani ishga tushiramiz
+  // MutationObserver + fallback timeout orqali DOM tayyor bo'lishini kutamiz
+  _initMapWhenReady();
 }
-function initMap() {
-  const node = el('mapEl');
+function _initMapWhenReady() {
+  // Eski xaritani tozalash
+  try { if (State._map) { State._map.remove(); State._map = null; } } catch (e) {}
+
+  let attempts = 0;
+  const MAX_ATTEMPTS = 40; // 40 × 50ms = 2 soniya
+
+  function tryInit() {
+    attempts++;
+    const node = el('mapEl');
+    const wrap = el('mapWrap');
+    if (!node || !wrap || !window.L) {
+      if (attempts < MAX_ATTEMPTS) { setTimeout(tryInit, 50); }
+      else { openAddressForm(true); } // fallback: manual forma
+      return;
+    }
+    // Container o'lchami nol bo'lsa — kutamiz
+    const rect = wrap.getBoundingClientRect();
+    if (rect.width < 10 || rect.height < 10) {
+      if (attempts < MAX_ATTEMPTS) { setTimeout(tryInit, 50); }
+      else { openAddressForm(true); }
+      return;
+    }
+    initMap(node);
+  }
+  setTimeout(tryInit, 80);
+}
+
+function initMap(node) {
+  if (!node) node = el('mapEl');
   if (!node || !window.L) return;
   try { if (State._map) { State._map.remove(); State._map = null; } } catch (e) {}
-  const start = (State.currentAddress && State.currentAddress.lat) ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng } : TASHKENT;
-  State._map = L.map(node, { zoomControl: false, attributionControl: false }).setView([start.lat, start.lng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc' }).addTo(State._map);
-  [80, 300, 700].forEach(ms => setTimeout(() => { try { State._map && State._map.invalidateSize(); } catch (e) {} }, ms));
+  const start = (State.currentAddress && State.currentAddress.lat)
+    ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng }
+    : TASHKENT;
+  try {
+    State._map = L.map(node, {
+      zoomControl: true,
+      attributionControl: false,
+      tap: true,
+      dragging: true,
+    }).setView([start.lat, start.lng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      subdomains: 'abc',
+      crossOrigin: true,
+    }).addTo(State._map);
+
+    // Hajmni bir necha marta qayta hisoblash (sheet animatsiyasi davomida)
+    [100, 300, 600, 1000].forEach(ms =>
+      setTimeout(() => { try { State._map && State._map.invalidateSize(true); } catch (e) {} }, ms)
+    );
+  } catch (e) {
+    console.error('Map init error:', e);
+    State._map = null;
+    openAddressForm(true);
+  }
 }
 function locateMe() {
   if (!navigator.geolocation) { toast(L('loc_fail')); return; }
@@ -311,10 +367,18 @@ function locateMe() {
 }
 async function reverseGeocode(lat, lng) {
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${State.lang}&zoom=18`);
-    const j = await r.json(); const a = j.address || {};
-    return [a.road, a.house_number, a.neighbourhood || a.suburb].filter(Boolean).join(', ') || '';
-  } catch (e) { return ''; }
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${State.lang}&zoom=18`;
+    const r = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!r.ok) return '';
+    const j = await r.json();
+    const a = j.address || {};
+    return [a.road, a.house_number, a.neighbourhood || a.suburb || a.city_district]
+      .filter(Boolean).join(', ') || '';
+  } catch (e) {
+    return '';
+  }
 }
 function openAddressForm(manual) {
   const labels = [['Uy', L('label_home')], ['Ish', L('label_work')], ['Boshqa', L('label_other')]];
@@ -368,9 +432,15 @@ function renderProfile() {
   const add = el('profAddAddr'); if (add) add.onclick = openMapStep;
 }
 
-/* Sheets */
-function openSheet(id) { el(id).classList.add('open'); if (tg && tg.BackButton) tg.BackButton.show(); }
-function closeSheets() { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); try { if (State._map) { State._map.remove(); State._map = null; } } catch (e) {} if (tg && tg.BackButton) tg.BackButton.hide(); }
+function openSheet(id) {
+  el(id).classList.add('open');
+  if (tg && tg.BackButton) tg.BackButton.show();
+}
+function closeSheets() {
+  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open'));
+  try { if (State._map) { State._map.remove(); State._map = null; } } catch (e) {}
+  if (tg && tg.BackButton) tg.BackButton.hide();
+}
 
 /* Nav */
 function switchView(view) {

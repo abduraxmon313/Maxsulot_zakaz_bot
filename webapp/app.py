@@ -105,6 +105,12 @@ async def security_middleware(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' https://telegram.org https://cdnjs.cloudflare.com; "
+        "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.openstreetmap.org; "
+        "connect-src 'self' https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org; "
         "frame-ancestors 'self' https://telegram.org https://*.telegram.org "
         "https://web.telegram.org tg://"
     )
