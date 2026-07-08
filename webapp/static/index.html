@@ -107,9 +107,23 @@
   <div id="toast" class="toast"></div>
   
   <!-- Leaflet Map Library -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    console.log('Loading Leaflet library...');
+  </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+          crossorigin=""
+          onload="console.log('✅ Leaflet script loaded successfully')"
+          onerror="console.error('❌ Failed to load Leaflet script')"></script>
+  <script>
+    if (typeof window.L !== 'undefined') {
+      console.log('✅ Leaflet is available, version:', window.L.version);
+    } else {
+      console.error('❌ Leaflet (window.L) is NOT available after script tag');
+    }
+  </script>
   
   <!-- Main App Script -->
-  <script src="/static/app.js?v=6"></script>
+  <script src="/static/app.js?v=7"></script>
 </body>
 </html>

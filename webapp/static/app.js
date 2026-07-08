@@ -631,4 +631,34 @@ function bindEvents() {
 }
 
 bindEvents();
-init();
+
+// Debug: Check if Leaflet is loaded
+console.log('=== DEBUG INFO ===');
+console.log('Leaflet (window.L) loaded:', typeof window.L !== 'undefined');
+console.log('Leaflet version:', window.L ? window.L.version : 'N/A');
+console.log('Document ready state:', document.readyState);
+console.log('==================');
+
+// Wait for Leaflet to be fully loaded
+if (typeof window.L !== 'undefined') {
+  console.log('✅ Leaflet is ready, initializing app...');
+  init();
+} else {
+  console.warn('⚠️ Leaflet not loaded yet, waiting...');
+  let attempts = 0;
+  const maxAttempts = 20;
+  const checkInterval = setInterval(() => {
+    attempts++;
+    console.log(`Checking for Leaflet... attempt ${attempts}/${maxAttempts}`);
+    if (typeof window.L !== 'undefined') {
+      clearInterval(checkInterval);
+      console.log('✅ Leaflet loaded successfully!');
+      init();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(checkInterval);
+      console.error('❌ Leaflet failed to load after', maxAttempts, 'attempts');
+      console.error('Continuing without map functionality...');
+      init(); // Init anyway, map will fallback to manual entry
+    }
+  }, 200);
+}
