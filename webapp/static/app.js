@@ -271,14 +271,30 @@ function openAddressSheet() {
   openSheet('sheetAddress');
 }
 function openMapStep() {
-  if (!window.L) { 
-    State._pickLat = null; 
-    State._pickLng = null; 
-    State._pickStreet = ''; 
-    toast(L('map_unavailable'));
-    openAddressForm(true); 
-    return; 
+  // Leaflet kutubxonasi yuklanishini kutamiz
+  if (!window.L) {
+    console.warn('Leaflet not loaded yet, waiting...');
+    let attempts = 0;
+    const maxAttempts = 10;
+    const checkLeaflet = setInterval(() => {
+      attempts++;
+      if (window.L) {
+        clearInterval(checkLeaflet);
+        console.log('Leaflet loaded successfully!');
+        openMapStep(); // Qayta chaqiramiz
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkLeaflet);
+        console.error('Leaflet failed to load after', maxAttempts, 'attempts');
+        State._pickLat = null; 
+        State._pickLng = null; 
+        State._pickStreet = ''; 
+        toast(L('map_unavailable'));
+        openAddressForm(true);
+      }
+    }, 300);
+    return;
   }
+  
   el('addressContent').innerHTML = `
     <div class="map-step">
       <h2 class="sheet-title">${L('add_address_title')}</h2>
