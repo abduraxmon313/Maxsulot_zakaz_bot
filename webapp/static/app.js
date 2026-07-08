@@ -271,42 +271,226 @@ function openAddressSheet() {
   openSheet('sheetAddress');
 }
 function openMapStep() {
-  if (!window.L) { State._pickLat = null; State._pickLng = null; State._pickStreet = ''; openAddressForm(true); return; }
+  if (!window.L) { 
+    State._pickLat = null; 
+    State._pickLng = null; 
+    State._pickStreet = ''; 
+    toast(L('map_unavailable'));
+    openAddressForm(true); 
+    return; 
+  }
   el('addressContent').innerHTML = `
     <div class="map-step">
       <h2 class="sheet-title">${L('add_address_title')}</h2>
-      <div class="map-wrap" style="height:56vh"><div id="mapEl"></div><div class="map-pin" style="color:var(--primary)">${IC.mapPin}</div><button class="map-locate" id="locBtn" type="button">${IC.locate}</button></div>
+      <div class="map-wrap"><div id="mapEl"></div><div class="map-pin" style="color:var(--primary)">${IC.mapPin}</div><button class="map-locate" id="locBtn" type="button">${IC.locate}</button></div>
       <div class="map-hint">${L('map_hint')}</div>
       <button class="btn" id="mapContinue">${L('continue')}</button>
     </div>`;
   openSheet('sheetAddress');
-  // Xaritani har safar QAYTA yaratamiz (eski DOM'ga bog'lanib qolmasligi uchun).
-  requestAnimationFrame(() => setTimeout(initMap, 60));
+  // Xaritani har safar QAYTA yaratamiz va katta timeout beramiz
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      initMap();
+      // Sheet ochilganidan keyin qayta resize qilamiz
+      setTimeout(() => {
+        if (State._map) {
+          try {
+            State._map.invalidateSize();
+            // Default joyni o'rnatamiz
+            const start = (State.currentAddress && State.currentAddress.lat) 
+              ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng } 
+              : TASHKENT;
+            State._map.setView([start.lat, start.lng], 15);
+          } catch (e) {
+            console.error('Map resize error:', e);
+          }
+        }
+      }, 200);
+    }, 100);
+  });
+  
   el('locBtn').onclick = locateMe;
   el('mapContinue').onclick = () => {
     let lat = TASHKENT.lat, lng = TASHKENT.lng;
-    if (State._map) { const c = State._map.getCenter(); lat = c.lat; lng = c.lng; }
-    State._pickLat = lat; State._pickLng = lng; State._pickStreet = '';
+    if (State._map) { 
+      try {
+        const c = State._map.getCenter(); 
+        lat = c.lat; 
+        lng = c.lng; 
+      } catch (e) {
+        console.error('Map getCenter error:', e);
+      }
+    }
+    State._pickLat = lat; 
+    State._pickLng = lng; 
+    State._pickStreet = '';
     openAddressForm(false);
-    reverseGeocode(lat, lng).then(s => { const inp = el('afStreet'); if (s && inp && !inp.value) inp.value = s; });
+    reverseGeocode(lat, lng).then(s => { 
+      const inp = el('afStreet'); 
+      if (s && inp && !inp.value) inp.value = s; 
+    }).catch(e => console.error('Reverse geocode error:', e));
   };
 }
 function initMap() {
   const node = el('mapEl');
-  if (!node || !window.L) return;
-  try { if (State._map) { State._map.remove(); State._map = null; } } catch (e) {}
-  const start = (State.currentAddress && State.currentAddress.lat) ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng } : TASHKENT;
-  State._map = L.map(node, { zoomControl: false, attributionControl: false }).setView([start.lat, start.lng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc' }).addTo(State._map);
-  [80, 300, 700].forEach(ms => setTimeout(() => { try { State._map && State._map.invalidateSize(); } catch (e) {} }, ms));
+  if (!node || !window.L) {
+    console.error('Map element or Leaflet not found');
+    return;
+  }
+  
+  // Eski xaritani to'liq olib tashlaymiz
+  try { 
+    if (State._map) { 
+      State._map.remove(); 
+      State._map = null; 
+    } 
+  } catch (e) {
+    console.error('Error removing old map:', e);
+  }
+  
+  // Yangi xaritani yaratamiz
+  try {
+    const start = (State.currentAddress && State.currentAddress.lat) 
+      ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng } 
+      : TASHKENT;
+    
+    State._map = L.map(node, { 
+      zoomControl: false, 
+      attributionControl: false,
+      preferCanvas: true,
+      tap: true,
+      touchZoom: true,
+      dragging: true,
+      scrollWheelZoom: true
+    }).setView([start.lat, start.lng], 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      maxZoom: 19, 
+      subdomains: 'abc',
+      detectRetina: true
+    }).addTo(State._map);
+    
+    // Xarita to'liq yuklanganidan keyin resize qilamiz
+    State._map.whenReady(() => {
+      setTimeout(() => {
+        try {
+          if (State._map) {
+            State._map.invalidateSize();
+          }
+        } catch (e) {
+          console.error('Map invalidate error:', e);
+        }
+      }, 100);
+    });
+    
+    // Qo'shimcha resize attempts
+    [100, 300, 500, 1000].forEach(ms => {
+      setTimeout(() => { 
+        try { 
+          if (State._map) {
+            State._map.invalidateSize();
+          }
+        } catch (e) {
+          console.error('Map resize error:', e);
+        } 
+      }, ms);
+    });
+    
+    console.log('Map initialized successfully');
+  } catch (e) {
+    console.error('Error initializing map:', e);
+    toast(L('map_unavailable'));
+  }
 }
 function locateMe() {
-  if (!navigator.geolocation) { toast(L('loc_fail')); return; }
-  const btn = el('locBtn'); const orig = btn.innerHTML; btn.innerHTML = '⏳';
+  if (!navigator.geolocation) { 
+    toast(L('loc_fail')); 
+    return; 
+  }
+  
+  const btn = el('locBtn'); 
+  if (!btn) return;
+  
+  const orig = btn.innerHTML; 
+  btn.innerHTML = '⏳';
+  btn.disabled = true;
+  
+  console.log('Requesting geolocation...');
+  
+  // Telegram WebApp location API ni birinchi urinib ko'ramiz
+  if (tg && tg.LocationManager && tg.LocationManager.isLocationAvailable) {
+    try {
+      tg.LocationManager.getLocation((location) => {
+        if (location) {
+          console.log('Telegram location success:', location.latitude, location.longitude);
+          if (State._map) {
+            try {
+              State._map.setView([location.latitude, location.longitude], 17);
+              haptic('medium');
+              toast('✓ Joylashuv aniqlandi');
+            } catch (e) {
+              console.error('Error setting map view:', e);
+            }
+          }
+          btn.innerHTML = orig; 
+          btn.disabled = false;
+          return;
+        }
+        // Agar Telegram location ishlamasa, standart geolocation'ga o'tamiz
+        useStandardGeolocation(btn, orig);
+      });
+    } catch (e) {
+      console.log('Telegram location not available, using standard geolocation');
+      useStandardGeolocation(btn, orig);
+    }
+  } else {
+    useStandardGeolocation(btn, orig);
+  }
+}
+
+function useStandardGeolocation(btn, orig) {
   navigator.geolocation.getCurrentPosition(
-    (pos) => { if (State._map) State._map.setView([pos.coords.latitude, pos.coords.longitude], 17); btn.innerHTML = orig; haptic('medium'); },
-    () => { btn.innerHTML = orig; toast(L('loc_fail')); },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    (pos) => { 
+      console.log('Geolocation success:', pos.coords.latitude, pos.coords.longitude);
+      if (State._map) {
+        try {
+          State._map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+          haptic('medium');
+          toast('✓ Joylashuv aniqlandi');
+        } catch (e) {
+          console.error('Error setting map view:', e);
+        }
+      } else {
+        console.error('Map not initialized');
+        toast(L('loc_fail'));
+      }
+      btn.innerHTML = orig; 
+      btn.disabled = false;
+    },
+    (error) => { 
+      console.error('Geolocation error:', error.code, error.message);
+      btn.innerHTML = orig; 
+      btn.disabled = false;
+      
+      let errorMsg = L('loc_fail');
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          errorMsg = 'Joylashuv ruxsati berilmagan';
+          break;
+        case error.POSITION_UNAVAILABLE:
+          errorMsg = 'Joylashuvni aniqlab bo\'lmadi';
+          break;
+        case error.TIMEOUT:
+          errorMsg = 'Vaqt tugadi, qaytadan urinib ko\'ring';
+          break;
+      }
+      toast(errorMsg);
+    },
+    { 
+      enableHighAccuracy: true, 
+      timeout: 15000, 
+      maximumAge: 0 
+    }
   );
 }
 async function reverseGeocode(lat, lng) {
