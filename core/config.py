@@ -101,9 +101,6 @@ PUBLIC_BASE_URL = (
 # Mini App ochiladigan to'liq URL (Telegram WebApp tugmasi uchun).
 WEBAPP_URL = (os.getenv("WEBAPP_URL", "").strip() or PUBLIC_BASE_URL).rstrip("/")
 
-# Google Maps JavaScript API kaliti (manzil tanlash xaritasi uchun).
-# Bo'sh bo'lsa Mini App manzilni qo'lda kiritishga o'tadi.
-GOOGLE_MAPS_API_KEY = (os.getenv("GOOGLE_MAPS_API_KEY", "") or "").strip()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -140,5 +137,5 @@ DEFAULT_SETTINGS = {
     "free_delivery_from": "0",     # shu summadan oshsa bepul yetkazish (0 = o'chiq)
     "working_hours": "09:00 - 22:00",
     "is_open": "1",                # 1 = ochiq, 0 = yopiq (buyurtma qabul qilinmaydi)
-    "primary_color": "#7000FF",    # Mini App asosiy rangi (brendlash)
+    "primary_color": "#8B5E3C",    # Mini App asosiy rangi (issiq jigarrang)
 }

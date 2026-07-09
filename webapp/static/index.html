@@ -3,109 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#FAF7F2" />
   <title>Do'kon</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=7" />
+  <link rel="stylesheet" href="/static/styles.css?v=8" />
 </head>
 <body>
   <div id="splash" class="splash"><div class="spinner"></div></div>
 
   <main id="app">
-    <!-- ASOSIY -->
+    <!-- ═══ HOME ═══ -->
     <section id="view-home" class="view active">
-      <div class="home-head">
-        <button class="address-bar" id="addressBar">
-          <span class="ab-ic">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V20h14V9.8"/></svg>
-          </span>
-          <span class="ab-text">
-            <span class="ab-label" id="abLabel">Yetkazib berish manzili</span>
-            <b id="abTitle">Manzil qo'shing
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </b>
-          </span>
-        </button>
-        <div class="search-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" id="searchInput" placeholder="Qidirish..." autocomplete="off" />
-          <button class="search-clear" id="searchClear" hidden>✕</button>
+      <header class="topbar">
+        <div class="tb-brand">
+          <div class="tb-logo" id="shopLogo"></div>
+          <div class="tb-text">
+            <span class="tb-eyebrow" id="shopStatus">Onlayn do'kon</span>
+            <b class="tb-name" id="shopName">Do'kon</b>
+          </div>
         </div>
-      </div>
-      <div class="home-body">
-        <div id="closedBanner" class="closed-banner" hidden>⏰ Do'kon hozir yopiq</div>
+        <button class="tb-icon" id="tbCart" aria-label="Savat">
+          <span data-ic="cart"></span>
+          <b id="cartBadge" class="badge" hidden>0</b>
+        </button>
+      </header>
+
+      <div class="home-scroll">
+        <div class="searchbar">
+          <span data-ic="search" class="sb-ic"></span>
+          <input type="text" id="searchInput" placeholder="Mahsulot qidirish…" autocomplete="off" aria-label="Qidirish" />
+          <button class="sb-clear" id="searchClear" hidden aria-label="Tozalash"><span data-ic="x"></span></button>
+        </div>
+
+        <div id="closedBanner" class="notice" hidden>
+          <span data-ic="clock"></span><span>Do'kon hozircha yopiq</span>
+        </div>
+
         <div id="banners" class="banners"></div>
-        <div id="categories" class="cat-strip"></div>
-        <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
+
+        <div id="catWrap" class="cat-wrap">
+          <div id="categories" class="cat-strip"></div>
+        </div>
+
+        <div class="section-head">
+          <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
+        </div>
+
         <div id="products" class="grid"></div>
-        <div id="emptyProducts" class="empty" hidden>Mahsulot topilmadi</div>
+        <div id="emptyProducts" class="empty" hidden>
+          <div class="empty-ic"><span data-ic="package"></span></div>
+          <p>Mahsulot topilmadi</p>
+        </div>
       </div>
     </section>
 
-    <!-- SAVAT -->
+    <!-- ═══ CART ═══ -->
     <section id="view-cart" class="view">
-      <h2 class="view-title">Savat</h2>
+      <header class="page-head"><h1>Savat</h1></header>
       <div id="cartItems" class="cart-items"></div>
-      <div id="cartEmpty" class="empty" hidden>Savat bo'sh</div>
+      <div id="cartEmpty" class="empty" hidden>
+        <div class="empty-ic"><span data-ic="cart"></span></div>
+        <p>Savat bo'sh</p>
+        <button class="btn btn-ghost" id="emptyGoShop">Xaridni boshlash</button>
+      </div>
       <div id="cartFooter" class="cart-footer"></div>
     </section>
 
-    <!-- BUYURTMALAR -->
+    <!-- ═══ ORDERS ═══ -->
     <section id="view-orders" class="view">
-      <h2 class="view-title">Buyurtmalarim</h2>
+      <header class="page-head"><h1>Buyurtmalarim</h1></header>
       <div id="ordersList" class="orders-list"></div>
-      <div id="emptyOrders" class="empty" hidden>Sizda hali buyurtmalar yo'q</div>
+      <div id="emptyOrders" class="empty" hidden>
+        <div class="empty-ic"><span data-ic="receipt"></span></div>
+        <p>Sizda hali buyurtmalar yo'q</p>
+      </div>
     </section>
 
-    <!-- PROFIL -->
+    <!-- ═══ PROFILE ═══ -->
     <section id="view-profile" class="view">
-      <h2 class="view-title">Profil</h2>
+      <header class="page-head"><h1>Profil</h1></header>
       <div id="profileContent"></div>
     </section>
   </main>
 
+  <!-- Product sheet -->
   <div id="sheetProduct" class="sheet">
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card"><div class="sheet-handle"></div><div id="productContent"></div></div>
   </div>
 
-  <div id="sheetAddress" class="sheet">
-    <div class="sheet-backdrop" data-close></div>
-    <div class="sheet-card tall"><div class="sheet-handle"></div><div id="addressContent"></div></div>
-  </div>
-
+  <!-- Checkout sheet -->
   <div id="sheetCheckout" class="sheet">
     <div class="sheet-backdrop" data-close></div>
-    <div class="sheet-card tall"><div class="sheet-handle"></div>
+    <div class="sheet-card tall">
+      <div class="sheet-handle"></div>
       <h2 class="sheet-title">Buyurtmani rasmiylashtirish</h2>
       <div id="checkoutContent"></div>
     </div>
   </div>
 
+  <!-- Bottom nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" data-nav="home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V20h14V9.8"/></svg>
-      <small>Asosiy</small>
-    </button>
-    <button class="nav-item" data-nav="cart">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14l-1.2 11a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
-      <small>Savat</small><b id="cartBadge" class="badge" hidden>0</b>
-    </button>
-    <button class="nav-item" data-nav="orders">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></svg>
-      <small>Buyurtmalar</small>
-    </button>
-    <button class="nav-item" data-nav="profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>
-      <small>Profil</small>
-    </button>
+    <button class="nav-item active" data-nav="home"><span data-ic="home"></span><small>Asosiy</small></button>
+    <button class="nav-item" data-nav="cart"><span data-ic="cart"></span><small>Savat</small><b id="navCartBadge" class="badge" hidden>0</b></button>
+    <button class="nav-item" data-nav="orders"><span data-ic="receipt"></span><small>Buyurtmalar</small></button>
+    <button class="nav-item" data-nav="profile"><span data-ic="user"></span><small>Profil</small></button>
   </nav>
 
   <div id="toast" class="toast"></div>
-
-  <!-- Google Maps JS API config'dagi kalit orqali dinamik yuklanadi (app.js) -->
-  <script src="/static/app.js?v=7"></script>
+  <script src="/static/app.js?v=8"></script>
 </body>
 </html>

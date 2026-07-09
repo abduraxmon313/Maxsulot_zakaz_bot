@@ -61,6 +61,7 @@ async def create_order(
     lng: float | None = None,
     phone: str | None = None,
     payment_method: str = "cash",
+    is_paid: bool = False,
     note: str | None = None,
 ) -> Order:
     if not items:
@@ -150,6 +151,8 @@ async def create_order(
         discount_total=0,
         grand_total=grand_total,
         payment_method=payment_method if payment_method in ("cash", "card", "online") else "cash",
+        is_paid=bool(is_paid),
+        paid_at=datetime.utcnow() if is_paid else None,
         status="created",
         note=note,
     )

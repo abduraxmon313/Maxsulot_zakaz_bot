@@ -30,7 +30,8 @@ def order_summary_text(order, currency: str = "so'm", for_admin: bool = False) -
     if order.lat is not None and order.lng is not None:
         lines.append(f"🗺 <a href=\"https://maps.google.com/?q={order.lat},{order.lng}\">Xaritada ochish</a>")
     pm = {"cash": "💵 Naqd", "card": "💳 Karta", "online": "🌐 Onlayn"}.get(order.payment_method, order.payment_method)
-    lines.append(f"To'lov: {pm}")
+    paid = "✅ To'langan" if getattr(order, "is_paid", False) else "⏳ To'lanmagan"
+    lines.append(f"To'lov: {pm} · {paid}")
     if order.note:
         lines.append(f"📝 {order.note}")
     if for_admin:

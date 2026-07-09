@@ -57,6 +57,46 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "status_rejected": {"uz": "❌ Buyurtmangiz rad etildi", "ru": "❌ Заказ отклонён", "en": "❌ Order rejected"},
 
     "order_number": {"uz": "Buyurtma", "ru": "Заказ", "en": "Order"},
+
+    # ── Buyurtma oqimi (savat → lokatsiya → to'lov) ──
+    "order_empty": {
+        "uz": "Savat bo'sh. Iltimos, avval mahsulot tanlang.",
+        "ru": "Корзина пуста. Пожалуйста, сначала выберите товар.",
+        "en": "Your cart is empty. Please choose a product first.",
+    },
+    "order_need_phone": {
+        "uz": "Buyurtma berish uchun telefon raqamingiz kerak. /start bosing.",
+        "ru": "Для заказа нужен номер телефона. Нажмите /start.",
+        "en": "We need your phone number to order. Tap /start.",
+    },
+    "ask_location": {
+        "uz": "📍 Buyurtmani qayerga yetkazamiz?\n\nPastdagi «📍 Lokatsiyani yuborish» tugmasini bosing yoki manzilingizni matn ko'rinishida yozing.",
+        "ru": "📍 Куда доставить заказ?\n\nНажмите «📍 Отправить локацию» ниже или напишите адрес текстом.",
+        "en": "📍 Where should we deliver?\n\nTap «📍 Send location» below or type your address.",
+    },
+    "btn_send_location": {"uz": "📍 Lokatsiyani yuborish", "ru": "📍 Отправить локацию", "en": "📍 Send location"},
+    "btn_cancel_order": {"uz": "❌ Bekor qilish", "ru": "❌ Отменить", "en": "❌ Cancel"},
+    "order_canceled_msg": {"uz": "Buyurtma bekor qilindi.", "ru": "Заказ отменён.", "en": "Order canceled."},
+    "location_saved": {"uz": "✅ Lokatsiya qabul qilindi.", "ru": "✅ Локация принята.", "en": "✅ Location received."},
+    "confirm_order": {
+        "uz": "Buyurtmani tasdiqlang 👇",
+        "ru": "Подтвердите заказ 👇",
+        "en": "Please confirm your order 👇",
+    },
+    "btn_pay_now": {"uz": "💳 To'lash", "ru": "💳 Оплатить", "en": "💳 Pay now"},
+    "btn_confirm_order": {"uz": "✅ Buyurtmani tasdiqlash", "ru": "✅ Подтвердить заказ", "en": "✅ Confirm order"},
+    "paying": {"uz": "💳 To'lov amalga oshirilmoqda…", "ru": "💳 Проводим оплату…", "en": "💳 Processing payment…"},
+    "paid_ok": {"uz": "✅ To'lov muvaffaqiyatli qabul qilindi!", "ru": "✅ Оплата прошла успешно!", "en": "✅ Payment successful!"},
+    "order_placed": {
+        "uz": "🎉 Buyurtmangiz qabul qilindi!\n{order_number} #{number}\nJami: {total}",
+        "ru": "🎉 Заказ принят!\n{order_number} #{number}\nИтого: {total}",
+        "en": "🎉 Order received!\n{order_number} #{number}\nTotal: {total}",
+    },
+    "delivery_type": {"uz": "Yetkazish turi", "ru": "Тип доставки", "en": "Delivery type"},
+    "dtype_delivery": {"uz": "🚚 Yetkazib berish", "ru": "🚚 Доставка", "en": "🚚 Delivery"},
+    "dtype_pickup": {"uz": "🏃 Olib ketish", "ru": "🏃 Самовывоз", "en": "🏃 Pickup"},
+    "pay_cash": {"uz": "💵 Naqd (yetkazishda)", "ru": "💵 Наличные (при доставке)", "en": "💵 Cash (on delivery)"},
+    "pay_card": {"uz": "💳 Karta / Onlayn", "ru": "💳 Карта / Онлайн", "en": "💳 Card / Online"},
 }
 
 # Mahsulot ro'yxatidagi status nomlari (admin/super admin uchun ham qulay).

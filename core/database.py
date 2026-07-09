@@ -71,6 +71,8 @@ ORDER_NEW_COLUMNS = [
     ("lng", "DOUBLE PRECISION"),
     ("discount_total", "INTEGER DEFAULT 0"),
     ("cancel_reason", "VARCHAR(255)"),
+    ("is_paid", "BOOLEAN DEFAULT FALSE"),
+    ("paid_at", "TIMESTAMP"),
     ("confirmed_at", "TIMESTAMP"),
     ("delivered_at", "TIMESTAMP"),
     ("canceled_at", "TIMESTAMP"),
@@ -121,7 +123,7 @@ async def create_tables():
             return
         # Barcha modellarni import qilamiz — Base.metadata to'lishi uchun.
         from core.models import (  # noqa: F401
-            setting, user, category, product, banner, order, media, address,
+            setting, user, category, product, banner, order, media,
         )
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

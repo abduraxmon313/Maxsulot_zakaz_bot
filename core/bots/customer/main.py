@@ -11,7 +11,7 @@ from aiogram.types import BotCommand
 
 from core.bots import registry
 from core.bots.common import DbSessionMiddleware
-from core.bots.customer import handlers
+from core.bots.customer import handlers, order_flow
 from core.config import CUSTOMER_BOT_TOKEN
 from core.database import create_tables
 
@@ -31,6 +31,9 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
     dp.message.middleware(DbSessionMiddleware())
     dp.callback_query.middleware(DbSessionMiddleware())
+    # Buyurtma oqimi (web_app_data + holatli handlerlar) umumiy menyu handleridan
+    # OLDIN turishi kerak — shuning uchun avval include qilamiz.
+    dp.include_router(order_flow.router)
     dp.include_router(handlers.router)
 
     await bot.set_my_commands([BotCommand(command="start", description="Boshlash / Магазин / Start")])

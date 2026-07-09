@@ -45,24 +45,6 @@ def serialize_banner(banner) -> dict:
     }
 
 
-def serialize_address(addr) -> dict:
-    from core.services.address_service import compose_text
-    return {
-        "id": addr.id,
-        "label": addr.label,
-        "lat": addr.lat,
-        "lng": addr.lng,
-        "street": addr.street,
-        "house": addr.house,
-        "apartment": addr.apartment,
-        "entrance": addr.entrance,
-        "floor": addr.floor,
-        "comment": addr.comment,
-        "is_default": addr.is_default,
-        "text": compose_text(addr),
-    }
-
-
 def serialize_order(order, currency: str = "so'm") -> dict:
     return {
         "id": order.id,
@@ -75,6 +57,7 @@ def serialize_order(order, currency: str = "so'm") -> dict:
         "discount_total": order.discount_total,
         "grand_total": order.grand_total,
         "payment_method": order.payment_method,
+        "is_paid": bool(getattr(order, "is_paid", False)),
         "note": order.note,
         "created_at": order.created_at.isoformat() if order.created_at else None,
         "items": [

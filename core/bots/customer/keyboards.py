@@ -45,6 +45,27 @@ def language_inline() -> InlineKeyboardMarkup:
     ]])
 
 
+def location_request(lang: str) -> ReplyKeyboardMarkup:
+    """Yetkazish uchun Telegram native lokatsiya so'rovi (xarita API kerak emas)."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=t("btn_send_location", lang), request_location=True)],
+            [KeyboardButton(text=t("btn_cancel_order", lang))],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+def pay_inline(order_token: str, lang: str, paid: bool) -> InlineKeyboardMarkup:
+    """To'lash / tasdiqlash tugmasi. paid=True bo'lsa 'To'lash' (avtomatik), aks holda tasdiqlash."""
+    label = t("btn_pay_now", lang) if paid else t("btn_confirm_order", lang)
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=label, callback_data=f"ordpay:{order_token}")],
+        [InlineKeyboardButton(text=t("btn_cancel_order", lang), callback_data="ordcancel")],
+    ])
+
+
 def open_shop_inline(lang: str) -> InlineKeyboardMarkup | None:
     if not WEBAPP_URL.startswith("https://"):
         return None

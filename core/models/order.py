@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger, DateTime, Float, ForeignKey, Integer, String, Text, func,
+    BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,8 @@ class Order(Base):
 
     # cash | card | online
     payment_method: Mapped[str] = mapped_column(String(12), default="cash")
+    # To'lov holati: True bo'lsa buyurtma to'langan deb belgilangan.
+    is_paid: Mapped[bool] = mapped_column(Boolean, default=False)
     # status: created | confirmed | preparing | on_way | delivered | completed | canceled | rejected
     status: Mapped[str] = mapped_column(String(16), default="created", index=True)
 
@@ -40,6 +42,7 @@ class Order(Base):
     cancel_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
