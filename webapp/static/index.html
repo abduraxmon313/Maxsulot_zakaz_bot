@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#FAF7F2" />
+  <title>Do'kon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=10" />
+</head>
+<body>
+  <div id="splash" class="splash"><div class="spinner"></div></div>
+
+  <main id="app">
+    <!-- ═══ HOME ═══ -->
+    <section id="view-home" class="view active">
+      <header class="topbar">
+        <div class="tb-brand">
+          <div class="tb-logo" id="shopLogo"></div>
+          <div class="tb-text">
+            <span class="tb-eyebrow" id="shopStatus">Onlayn do'kon</span>
+            <b class="tb-name" id="shopName">Do'kon</b>
+          </div>
+        </div>
+        <button class="tb-icon" id="tbCart" aria-label="Savat">
+          <span data-ic="cart"></span>
+          <b id="cartBadge" class="badge" hidden>0</b>
+        </button>
+      </header>
+
+      <div class="home-scroll">
+        <div class="searchbar">
+          <span data-ic="search" class="sb-ic"></span>
+          <input type="text" id="searchInput" placeholder="Mahsulot qidirish…" autocomplete="off" aria-label="Qidirish" />
+          <button class="sb-clear" id="searchClear" hidden aria-label="Tozalash"><span data-ic="x"></span></button>
+        </div>
+
+        <div id="closedBanner" class="notice" hidden>
+          <span data-ic="clock"></span><span>Do'kon hozircha yopiq</span>
+        </div>
+
+        <div id="banners" class="banners"></div>
+
+        <div id="catWrap" class="cat-wrap">
+          <div id="categories" class="cat-strip"></div>
+        </div>
+
+        <div class="section-head">
+          <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
+        </div>
+
+        <div id="products" class="grid"></div>
+        <div id="emptyProducts" class="empty" hidden>
+          <div class="empty-ic"><span data-ic="package"></span></div>
+          <p>Mahsulot topilmadi</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CART ═══ -->
+    <section id="view-cart" class="view">
+      <header class="page-head"><h1>Savat</h1></header>
+      <div id="cartItems" class="cart-items"></div>
+      <div id="cartEmpty" class="empty" hidden>
+        <div class="empty-ic"><span data-ic="cart"></span></div>
+        <p>Savat bo'sh</p>
+        <button class="btn btn-ghost" id="emptyGoShop">Xaridni boshlash</button>
+      </div>
+      <div id="cartFooter" class="cart-footer"></div>
+    </section>
+
+    <!-- ═══ ORDERS ═══ -->
+    <section id="view-orders" class="view">
+      <header class="page-head"><h1>Buyurtmalarim</h1></header>
+      <div id="ordersList" class="orders-list"></div>
+      <div id="emptyOrders" class="empty" hidden>
+        <div class="empty-ic"><span data-ic="receipt"></span></div>
+        <p>Sizda hali buyurtmalar yo'q</p>
+      </div>
+    </section>
+
+    <!-- ═══ PROFILE ═══ -->
+    <section id="view-profile" class="view">
+      <header class="page-head"><h1>Profil</h1></header>
+      <div id="profileContent"></div>
+    </section>
+  </main>
+
+  <!-- Product sheet -->
+  <div id="sheetProduct" class="sheet">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet-card"><div class="sheet-handle"></div><div id="productContent"></div></div>
+  </div>
+
+  <!-- Checkout sheet -->
+  <div id="sheetCheckout" class="sheet">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet-card tall">
+      <div class="sheet-handle"></div>
+      <h2 class="sheet-title">Buyurtmani rasmiylashtirish</h2>
+      <div id="checkoutContent"></div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-nav="home"><span data-ic="home"></span><small>Asosiy</small></button>
+    <button class="nav-item" data-nav="cart"><span data-ic="cart"></span><small>Savat</small><b id="navCartBadge" class="badge" hidden>0</b></button>
+    <button class="nav-item" data-nav="orders"><span data-ic="receipt"></span><small>Buyurtmalar</small></button>
+    <button class="nav-item" data-nav="profile"><span data-ic="user"></span><small>Profil</small></button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+  <script src="/static/app.js?v=10"></script>
+</body>
+</html>

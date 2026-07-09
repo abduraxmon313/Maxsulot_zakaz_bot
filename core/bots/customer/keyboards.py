@@ -1,0 +1,84 @@
+"""Sotuv bot klaviaturalari."""
+from __future__ import annotations
+
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    WebAppInfo,
+)
+
+from core.config import WEBAPP_URL
+from core.services.i18n import t
+
+
+def contact_request(lang: str) -> ReplyKeyboardMarkup:
+    """Telefon raqamni ulashish tugmasi (onboarding)."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=t("btn_share_phone", lang), request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+def main_menu(lang: str) -> ReplyKeyboardMarkup:
+    rows: list[list[KeyboardButton]] = []
+    # Mini App tugmasi faqat https URL bo'lganda WebApp sifatida qo'shiladi.
+    if WEBAPP_URL.startswith("https://"):
+        rows.append([KeyboardButton(text=t("btn_open_shop", lang), web_app=WebAppInfo(url=WEBAPP_URL))])
+    else:
+        rows.append([KeyboardButton(text=t("btn_open_shop", lang))])
+    rows.append([
+        KeyboardButton(text=t("btn_my_orders", lang)),
+        KeyboardButton(text=t("btn_contact", lang)),
+    ])
+    rows.append([KeyboardButton(text=t("btn_language", lang))])
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+
+def language_inline() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🇺🇿 O'zbek", callback_data="setlang:uz"),
+        InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang:ru"),
+        InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang:en"),
+    ]])
+
+
+# To'lov provayderlari (hozircha tanlangan har qaysisi "to'landi" deb hisoblanadi;
+# keyinroq haqiqiy API integratsiyasi qo'shiladi).
+PAYMENT_PROVIDERS = [
+    ("click", "Click"),
+    ("payme", "Payme"),
+    ("uzum", "Uzum"),
+    ("paylov", "Paylov"),
+]
+
+
+def pay_start(order_id: int, lang: str) -> InlineKeyboardMarkup:
+    """Buyurtma saqlangach mijozga yuboriladigan «To'lov qilish» tugmasi."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=t("btn_pay_order", lang), callback_data=f"pay:{order_id}"),
+    ]])
+
+
+def payment_providers(order_id: int, lang: str) -> InlineKeyboardMarkup:
+    """To'lov usulini tanlash (Click / Payme / Uzum / Paylov) — 2 ustun."""
+    rows: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+    for code, label in PAYMENT_PROVIDERS:
+        row.append(InlineKeyboardButton(text=f"💳 {label}", callback_data=f"paym:{code}:{order_id}"))
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def open_shop_inline(lang: str) -> InlineKeyboardMarkup | None:
+    if not WEBAPP_URL.startswith("https://"):
+        return None
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=t("btn_open_shop", lang), web_app=WebAppInfo(url=WEBAPP_URL)),
+    ]])
