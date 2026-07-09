@@ -74,6 +74,12 @@ async def create_order(payload: OrderIn, request: Request, session: AsyncSession
         )
     except OrderError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        # Kutilmagan xato — to'liq traceback Railway logida ko'rinadi.
+        logger.exception("Buyurtma yaratishda kutilmagan xato (telegram_id=%s)", telegram_id)
+        raise HTTPException(status_code=500, detail="Buyurtmani saqlashda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.")
 
     currency = await settings_service.get("currency", "so'm")
 

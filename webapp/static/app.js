@@ -434,8 +434,8 @@ function setLang(lang) {
 }
 
 function applyTheme() {
-  const color = (State.config && State.config.primary_color) || '#7A573F';
-  if (/^#([0-9a-f]{3}){1,2}$/i.test(color)) document.documentElement.style.setProperty('--primary', color);
+  // Rang butunlay CSS (brend palitrasi) tomonidan boshqariladi — DB'dagi eski
+  // primary_color (masalan sovuq #7000FF) endi QO'LLANILMAYDI.
   if (tg) { try { tg.setHeaderColor && tg.setHeaderColor('#F8F5EF'); tg.setBackgroundColor && tg.setBackgroundColor('#F8F5EF'); } catch (e) {} }
 }
 

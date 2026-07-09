@@ -29,7 +29,6 @@ async def get_config():
         "min_order_amount": int(s.get("min_order_amount", "0") or 0),
         "delivery_fee": int(s.get("delivery_fee", "0") or 0),
         "free_delivery_from": int(s.get("free_delivery_from", "0") or 0),
-        "primary_color": s.get("primary_color", "#7A573F"),
         "shop_image": _image_url(s.get("shop_image", "")),
         "delivery_slots": slots,
         "maps_api_key": YANDEX_MAPS_API_KEY,

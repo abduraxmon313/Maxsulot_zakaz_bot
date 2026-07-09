@@ -7,6 +7,7 @@ ular xotirada keshlanadi. Yozishda kesh yangilanadi. Bitta jarayon bo'lgani uchu
 """
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime
 
@@ -15,6 +16,8 @@ from sqlalchemy import select
 from core.config import DEFAULT_SETTINGS, TIMEZONE
 from core.database import AsyncSessionLocal
 from core.models.setting import Setting
+
+logger = logging.getLogger(__name__)
 
 _cache: dict[str, str] = {}
 _loaded = False
@@ -81,40 +84,61 @@ def invalidate():
 # ─────────────────────────────────────────────────────────────
 #  Ish vaqti (O'zbekiston vaqti — Asia/Tashkent, UTC+5)
 # ─────────────────────────────────────────────────────────────
-_TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
+# Namuna format: "09:00 - 22:00" (24 soatlik). "9-22" ham qo'llab-quvvatlanadi.
+WORKING_HOURS_EXAMPLE = "09:00 - 22:00"
+_HM_RE = re.compile(r"(\d{1,2}):(\d{2})")
+_HOUR_RE = re.compile(r"\d{1,2}")
+
+
+def _parse_hours(hours_str: str) -> tuple[int, int] | None:
+    """
+    working_hours dan (start_min, end_min) ni qaytaradi (24 soatlik, kun boshidan
+    daqiqalarda). Turli formatlarga bardoshli:
+      "09:00 - 22:00", "9:00-22:00", "09:00 dan 22:00 gacha", "9 - 22", "9-22".
+    Aniqlab bo'lmasa None.
+    """
+    s = hours_str or ""
+    hm = _HM_RE.findall(s)
+    if len(hm) >= 2:
+        try:
+            sh, sm = int(hm[0][0]), int(hm[0][1])
+            eh, em = int(hm[1][0]), int(hm[1][1])
+        except (ValueError, IndexError):
+            return None
+    else:
+        # Faqat soatlar berilgan bo'lsa (masalan "9 - 22").
+        nums = _HOUR_RE.findall(s)
+        if len(nums) < 2:
+            return None
+        try:
+            sh, sm = int(nums[0]), 0
+            eh, em = int(nums[1]), 0
+        except ValueError:
+            return None
+    # 24:00 — kun oxiri sifatida ruxsat.
+    if not (0 <= sh <= 23 and 0 <= eh <= 24 and 0 <= sm <= 59 and 0 <= em <= 59):
+        return None
+    return sh * 60 + sm, eh * 60 + em
 
 
 def _within_working_hours(hours_str: str) -> bool:
     """
-    `working_hours` (masalan "09:00 - 22:00") ni HOZIRGI O'ZBEKISTON VAQTI bilan
-    solishtiradi. Server UTC'da ishlasa ham vaqt Asia/Tashkent (UTC+5) bo'yicha
-    hisoblanadi.
+    Hozirgi O'ZBEKISTON VAQTI (Asia/Tashkent) ish vaqti ichidami?
+    Server UTC'da ishlasa ham UZ vaqti bo'yicha hisoblanadi.
 
-    - Bo'sh yoki tanib bo'lmasa → har doim ochiq (do'konni bloklamaymiz).
+    - Bo'sh/tanib bo'lmasa → har doim ochiq (do'konni bloklamaymiz).
     - start < end  → oddiy oraliq (09:00–22:00).
     - start > end  → tungi oraliq (22:00–06:00).
     - start == end → 24 soat ochiq.
     """
-    if not hours_str:
+    parsed = _parse_hours(hours_str)
+    if not parsed:
         return True
-    matches = _TIME_RE.findall(hours_str)
-    if len(matches) < 2:
-        return True
-    try:
-        sh, sm = int(matches[0][0]), int(matches[0][1])
-        eh, em = int(matches[1][0]), int(matches[1][1])
-    except (ValueError, IndexError):
-        return True
-    if not (0 <= sh <= 23 and 0 <= eh <= 23 and 0 <= sm <= 59 and 0 <= em <= 59):
-        return True
-
-    now = datetime.now(TIMEZONE)
-    cur = now.hour * 60 + now.minute
-    start = sh * 60 + sm
-    end = eh * 60 + em
-
+    start, end = parsed
     if start == end:
         return True
+    now = datetime.now(TIMEZONE)
+    cur = now.hour * 60 + now.minute
     if start < end:
         return start <= cur < end
     return cur >= start or cur < end
@@ -127,24 +151,14 @@ async def is_shop_open() -> bool:
       • Aks holda ish vaqti (O'zbekiston vaqti) bo'yicha aniqlanadi.
     """
     if not await get_bool("is_open", True):
+        logger.info("Do'kon YOPIQ: Super Admin qo'lda yopib qo'ygan (is_open=0)")
         return False
     hours = await get("working_hours", "")
-    return _within_working_hours(hours)
-
-
-def _parse_hours(hours_str: str) -> tuple[int, int] | None:
-    """working_hours dan (start_min, end_min) ni qaytaradi. Aniqlanmasa None."""
-    matches = _TIME_RE.findall(hours_str or "")
-    if len(matches) < 2:
-        return None
-    try:
-        sh, sm = int(matches[0][0]), int(matches[0][1])
-        eh, em = int(matches[1][0]), int(matches[1][1])
-    except (ValueError, IndexError):
-        return None
-    if not (0 <= sh <= 23 and 0 <= eh <= 23 and 0 <= sm <= 59 and 0 <= em <= 59):
-        return None
-    return sh * 60 + sm, eh * 60 + em
+    ok = _within_working_hours(hours)
+    if not ok:
+        now = datetime.now(TIMEZONE).strftime("%H:%M")
+        logger.info("Do'kon YOPIQ: hozir %s (UZ), ish vaqti='%s'", now, hours)
+    return ok
 
 
 async def delivery_slots(lead_minutes: int = 60, step_minutes: int = 30, max_slots: int = 24) -> list[str]:

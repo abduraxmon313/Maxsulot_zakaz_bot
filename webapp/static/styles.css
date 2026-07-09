@@ -24,6 +24,7 @@
 
   /* States */
   --success: #3F7D4A;
+  --warning: #C48A2A;
   --error: #B64136;
 
   /* Gradient brown → gold → beige */
@@ -217,11 +218,11 @@ img { display: block; max-width: 100%; }
 .order-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .order-num { font-weight: 800; font-size: 15px; }
 .order-status { font-size: 11.5px; font-weight: 700; padding: 5px 11px; border-radius: var(--r-full); }
-.st-created { background: #FDF3E3; color: #9A6B12; }
-.st-confirmed, .st-preparing { background: #EAF2FB; color: #2C5C99; }
-.st-on_way { background: #F1E9FB; color: #6B3F9E; }
+.st-created { background: #FBEFDD; color: #9A6B12; }
+.st-confirmed, .st-preparing { background: #F1E7DA; color: var(--primary); }
+.st-on_way { background: #F7ECCF; color: #A9761A; }
 .st-delivered, .st-completed { background: #E7F3E8; color: var(--success); }
-.st-canceled, .st-rejected { background: #FBEAE8; color: var(--error); }
+.st-canceled, .st-rejected { background: #F7E6E3; color: var(--error); }
 .order-items-mini { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin-bottom: 10px; }
 .order-total { font-weight: 800; font-size: 16px; color: var(--primary); }
 .order-paid { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--success); margin-left: 8px; }
