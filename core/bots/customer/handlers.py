@@ -133,6 +133,30 @@ async def handle_menu(message: Message, session: AsyncSession):
         await message.answer("📦 <b>Buyurtmalaringiz:</b>\n\n" + "\n".join(lines))
         return
 
+    if _is_btn(text, "btn_shop_address"):
+        lat = await settings_service.get("shop_lat", "")
+        lng = await settings_service.get("shop_lng", "")
+        note = await settings_service.get("shop_address", "")
+        if not lat or not lng:
+            await message.answer(t("shop_address_none", lang))
+            return
+        from core.utils import yandex_maps_link
+        try:
+            flat, flng = float(lat), float(lng)
+        except ValueError:
+            await message.answer(t("shop_address_none", lang))
+            return
+        # Telegram lokatsiyasi + izoh + Yandex havola.
+        try:
+            await message.answer_location(latitude=flat, longitude=flng)
+        except Exception:
+            pass
+        await message.answer(
+            t("shop_address_caption", lang, note=(note or ""), link=yandex_maps_link(flat, flng)),
+            disable_web_page_preview=False,
+        )
+        return
+
     if _is_btn(text, "btn_open_shop"):
         await _send_welcome(message, session, lang)
         return

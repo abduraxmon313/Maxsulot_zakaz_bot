@@ -25,7 +25,7 @@ from core.services.i18n import STATUS_LABELS
 from core.utils import fmt_money
 from core.bots.superadmin import keyboards as kb
 from core.bots.superadmin.states import (
-    AddCategory, AddProduct, EditPrice, EditSetting, EditStock,
+    AddCategory, AddProduct, EditPrice, EditSetting, EditStock, ShopLocation,
 )
 
 logger = logging.getLogger(__name__)
@@ -382,6 +382,60 @@ async def toggle_open(message: Message):
     else:
         state_txt = "🔴 YOPIQ — buyurtmalar to'xtatildi (qo'lda)"
     await message.answer(f"Do'kon holati: <b>{state_txt}</b>", reply_markup=kb.main_menu())
+
+
+# ═════════════════════════════════════════════════════════════
+#  DO'KON MANZILI (lokatsiya + izoh)
+# ═════════════════════════════════════════════════════════════
+@router.message(F.text == kb.BTN_SHOP_LOCATION)
+async def shop_location_start(message: Message, state: FSMContext):
+    lat = await settings_service.get("shop_lat", "")
+    lng = await settings_service.get("shop_lng", "")
+    note = await settings_service.get("shop_address", "")
+    current = "Hozircha o'rnatilmagan."
+    if lat and lng:
+        from core.utils import yandex_maps_link
+        current = f"📍 {note or 'manzil'}\n🗺 {yandex_maps_link(float(lat), float(lng))}"
+    await state.set_state(ShopLocation.location)
+    await message.answer(
+        f"📍 <b>Do'kon manzili</b>\n\nJoriy: {current}\n\n"
+        "Yangi lokatsiyani yuboring (pastdagi «📍 Lokatsiyani yuborish» tugmasi orqali "
+        "yoki 📎 → Location).",
+        reply_markup=kb.location_request_menu(),
+    )
+
+
+@router.message(ShopLocation.location, F.location)
+async def shop_location_received(message: Message, state: FSMContext):
+    await state.update_data(lat=message.location.latitude, lng=message.location.longitude)
+    await state.set_state(ShopLocation.comment)
+    await message.answer(
+        "✍️ Endi manzil izohini yozing (masalan: «Chilonzor 5, oynali bino, 1-qavat»).\n"
+        "Yoki izohsiz saqlash uchun «⏭ O'tkazib yuborish».",
+        reply_markup=kb.skip_menu(),
+    )
+
+
+@router.message(ShopLocation.location, F.text)
+async def shop_location_need(message: Message):
+    if message.text == kb.BTN_CANCEL:
+        return  # umumiy cancel handleri hal qiladi
+    await message.answer("📍 Iltimos, lokatsiyani yuboring (tugma orqali yoki 📎 → Location).")
+
+
+@router.message(ShopLocation.comment, F.text)
+async def shop_location_comment(message: Message, state: FSMContext):
+    data = await state.get_data()
+    comment = "" if message.text == kb.BTN_SKIP else message.text.strip()[:400]
+    await settings_service.set("shop_lat", str(data.get("lat", "")))
+    await settings_service.set("shop_lng", str(data.get("lng", "")))
+    await settings_service.set("shop_address", comment)
+    await state.clear()
+    await message.answer(
+        "✅ Do'kon manzili saqlandi. Endi mijozlar «📍 Do'kon manzili» tugmasi orqali "
+        "ko'ra oladi.",
+        reply_markup=kb.main_menu(),
+    )
 
 
 # ═════════════════════════════════════════════════════════════

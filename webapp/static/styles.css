@@ -1,43 +1,48 @@
 /* ═══════════════════════════════════════════════════════════
-   Maxsulot Zakaz — Premium Warm Design System
-   Palitra: Warm Brown / Sand / Golden / Cream
+   Maxsulot Zakaz — Premium Bright Design System
+   Palitra: White / Ivory / Cream / Champagne + Gold accents
+   (Gold — faqat urg'u: tugmalar, faol holatlar, chegaralar, ikonalar)
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* Brand (logotipdan olingan issiq palitra) */
-  --primary: #7A573F;         /* Primary Brown */
-  --primary-press: #5B3E2D;   /* Dark Brown */
-  --primary-soft: #F1E7DA;
-  --sand: #D9BC8E;            /* Warm Sand */
-  --beige: #E7C98B;           /* Golden Beige */
-  --gold: #C89A4A;            /* Accent Gold */
+  /* Brand — oltin faqat AKSENT */
+  --gold: #D4AF37;            /* Soft Gold */
+  --gold-light: #E8C76A;      /* Light Gold */
+  --gold-deep: #A8842A;       /* Chuqurroq oltin — oq fonda matn/kontrast uchun */
+  --champagne: #F2E6C9;
+  --primary: #A8842A;         /* aksent matn (narx, faol) — kontrast uchun chuqur oltin */
+  --primary-press: #8E6E1F;
+  --primary-soft: #FBF3DE;    /* juda och oltin tint (yumshoq fon) */
+  --sand: #E8C76A;
+  --beige: #F2E6C9;
+  --on-gold: #33290A;         /* oltin yuza ustidagi to'q matn (WCAG) */
 
-  /* Surfaces */
-  --bg: #F8F5EF;              /* Cream */
-  --card: #FFFFFF;
-  --line: #E8DED1;            /* Border */
-  --line-2: #F1EADF;
+  /* Surfaces — asosan oq/krem */
+  --bg: #FFFDF8;              /* Ivory */
+  --card: #FFFFFF;            /* Pure White */
+  --cream: #F8F3E8;
+  --line: #EFE7D3;            /* yumshoq champagne chegara */
+  --line-2: #F6F0E2;
 
   /* Text */
-  --text: #2E241C;
-  --muted: #7B6A5B;
+  --text: #2E241C;           /* Text Primary */
+  --muted: #8B7E6B;          /* Text Secondary */
 
   /* States */
   --success: #3F7D4A;
   --warning: #C48A2A;
   --error: #B64136;
 
-  /* Gradient brown → gold → beige */
-  --grad: linear-gradient(135deg, #7A573F 0%, #C89A4A 55%, #E7C98B 100%);
-  /* Tugmalar uchun iliq, biroz OCHROQ oltin-jigarrang gradient (og'ir jigarrang emas) */
-  --grad-btn: linear-gradient(135deg, #9A6F42 0%, #C79B52 100%);
-  --grad-btn-press: linear-gradient(135deg, #7A573F 0%, #AE853F 100%);
+  /* Gradients — oltin */
+  --grad: linear-gradient(135deg, #E8C76A 0%, #D4AF37 100%);
+  --grad-btn: linear-gradient(135deg, #E8C76A 0%, #D4AF37 100%);
+  --grad-btn-press: linear-gradient(135deg, #D9B84A 0%, #C29A22 100%);
 
-  /* Shadows — juda yumshoq */
-  --sh-xs: 0 1px 2px rgba(80, 55, 30, .05);
-  --sh-sm: 0 4px 14px rgba(80, 55, 30, .07);
-  --sh-md: 0 10px 30px rgba(80, 55, 30, .10);
-  --sh-lg: 0 18px 44px rgba(80, 55, 30, .16);
+  /* Shadows — juda yumshoq, iliq */
+  --sh-xs: 0 1px 2px rgba(120, 100, 60, .05);
+  --sh-sm: 0 4px 14px rgba(120, 100, 60, .08);
+  --sh-md: 0 12px 30px rgba(120, 100, 60, .12);
+  --sh-lg: 0 20px 48px rgba(120, 100, 60, .18);
 
   /* Radius */
   --r-sm: 12px;
@@ -93,7 +98,7 @@ img { display: block; max-width: 100%; }
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: calc(env(safe-area-inset-top) + 14px) 20px 14px;
-  background: rgba(250, 247, 242, .82);
+  background: rgba(255, 253, 248, .82);
   backdrop-filter: saturate(180%) blur(18px);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--line);
@@ -106,7 +111,7 @@ img { display: block; max-width: 100%; }
 .tb-icon { position: relative; width: 44px; height: 44px; border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); color: var(--text); display: grid; place-items: center; box-shadow: var(--sh-xs); transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
 .tb-icon:active { transform: scale(.94); }
 
-.badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--r-full); background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg); }
+.badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--r-full); background: var(--gold); color: var(--on-gold); font-size: 11px; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--bg); }
 
 .home-scroll { padding: 18px 20px 24px; }
 
@@ -135,7 +140,7 @@ img { display: block; max-width: 100%; }
 .cat-strip::-webkit-scrollbar { display: none; }
 .cat-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; white-space: nowrap; color: var(--text); transition: all var(--t) var(--ease); box-shadow: var(--sh-xs); }
 .cat-chip .cc-ic { font-size: 16px; line-height: 1; }
-.cat-chip.active { background: var(--grad-btn); border-color: transparent; color: #fff; box-shadow: var(--sh-sm); }
+.cat-chip.active { background: var(--grad-btn); border-color: transparent; color: var(--on-gold); box-shadow: var(--sh-sm); }
 .cat-chip:active { transform: scale(.96); }
 
 /* ═══ Section head ═══ */
@@ -163,9 +168,9 @@ img { display: block; max-width: 100%; }
 .pname { font-size: 13.5px; color: var(--text); margin: 3px 0 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; line-height: 1.4; }
 .add { width: 100%; height: 40px; border-radius: var(--r-sm); background: var(--primary-soft); color: var(--primary); font-weight: 700; font-size: 13.5px; transition: all var(--t) var(--ease); }
 .add:active { transform: scale(.97); }
-@media (hover: hover) { .add:hover { background: var(--grad-btn); color: #fff; } }
-.qty-mini { display: flex; align-items: center; justify-content: space-between; height: 40px; border-radius: var(--r-sm); background: var(--grad-btn); color: #fff; overflow: hidden; }
-.qty-mini button { width: 40px; height: 100%; color: #fff; font-size: 20px; font-weight: 600; display: grid; place-items: center; }
+@media (hover: hover) { .add:hover { background: var(--grad-btn); color: var(--on-gold); } }
+.qty-mini { display: flex; align-items: center; justify-content: space-between; height: 40px; border-radius: var(--r-sm); background: var(--grad-btn); color: var(--on-gold); overflow: hidden; }
+.qty-mini button { width: 40px; height: 100%; color: var(--on-gold); font-size: 20px; font-weight: 700; display: grid; place-items: center; }
 .qty-mini button:active { background: rgba(0,0,0,.12); }
 .qty-mini span { font-weight: 700; font-size: 15px; }
 
@@ -173,7 +178,7 @@ img { display: block; max-width: 100%; }
 .skeleton { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; padding: 0 0 14px; }
 .sk-img { aspect-ratio: 1/1; }
 .sk-line { height: 12px; border-radius: 6px; margin: 12px 13px 0; }
-.sk-img, .sk-line { background: linear-gradient(100deg, #f0ebe3 30%, #f8f4ee 50%, #f0ebe3 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+.sk-img, .sk-line { background: linear-gradient(100deg, #f3eede 30%, #fbf7ee 50%, #f3eede 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
 /* ═══ Empty states ═══ */
@@ -183,9 +188,9 @@ img { display: block; max-width: 100%; }
 .empty p { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 18px; }
 
 /* ═══ Buttons ═══ */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 54px; border-radius: var(--r); background: var(--grad-btn); color: #fff; font-weight: 700; font-size: 15.5px; box-shadow: 0 8px 20px rgba(150,105,60,.28); transition: transform var(--t) var(--ease), filter var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 54px; border-radius: var(--r); background: var(--grad-btn); color: var(--on-gold); font-weight: 800; font-size: 15.5px; box-shadow: 0 8px 22px rgba(212,175,55,.32); transition: transform var(--t) var(--ease), filter var(--t) var(--ease), box-shadow var(--t) var(--ease); }
 .btn:active { transform: scale(.98); background: var(--grad-btn-press); }
-@media (hover: hover) { .btn:hover { filter: brightness(1.04); box-shadow: 0 10px 26px rgba(150,105,60,.34); } }
+@media (hover: hover) { .btn:hover { filter: brightness(1.03); box-shadow: 0 12px 28px rgba(212,175,55,.4); } }
 .btn:disabled { opacity: .5; pointer-events: none; box-shadow: none; }
 .btn svg { width: 20px; height: 20px; }
 .btn-ghost { background: transparent; color: var(--primary); box-shadow: none; height: 46px; }
@@ -279,6 +284,11 @@ img { display: block; max-width: 100%; }
 .map-loading { position: absolute; inset: 0; z-index: 7; display: grid; place-items: center; background: var(--primary-soft); }
 .map-hint { text-align: center; color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
 
+/* ── Xarita xatosi ogohlantirishi (faqat olib ketish) ── */
+.map-warn { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; padding: 13px 15px; border-radius: var(--r-sm); background: #FCEEE9; border: 1px solid #F3D6CC; color: var(--error); font-weight: 600; font-size: 13px; line-height: 1.45; }
+.map-warn svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.seg button.disabled { opacity: .4; }
+
 /* ── Order success screen ── */
 .order-success { text-align: center; padding: 24px 8px 8px; animation: viewIn var(--t) var(--ease); }
 .os-check { width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%; background: #E7F3E8; color: var(--success); display: grid; place-items: center; }
@@ -291,13 +301,13 @@ img { display: block; max-width: 100%; }
 .profile { padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 .prof-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--sh-xs); }
 .prof-head { display: flex; align-items: center; gap: 14px; }
-.prof-avatar { width: 58px; height: 58px; border-radius: var(--r-full); background: var(--grad); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 800; box-shadow: var(--sh-sm); }
+.prof-avatar { width: 58px; height: 58px; border-radius: var(--r-full); background: var(--grad); color: var(--on-gold); display: grid; place-items: center; font-size: 22px; font-weight: 800; box-shadow: var(--sh-sm); }
 .prof-name { font-size: 17px; font-weight: 800; }
 .prof-phone { font-size: 13.5px; color: var(--muted); }
 .prof-section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 12px; }
 .lang-row { display: flex; gap: 8px; }
 .lang-pick { flex: 1; height: 46px; border-radius: var(--r-sm); background: var(--bg); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; color: var(--text); transition: all var(--t) var(--ease); }
-.lang-pick.active { background: var(--grad-btn); border-color: transparent; color: #fff; }
+.lang-pick.active { background: var(--grad-btn); border-color: transparent; color: var(--on-gold); }
 .prof-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line-2); }
 .prof-row:last-child { border-bottom: none; }
 .pr-ic { width: 38px; height: 38px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; flex-shrink: 0; }
@@ -319,11 +329,11 @@ img { display: block; max-width: 100%; }
 .time-slots::-webkit-scrollbar { display: none; }
 .time-slots .slot { flex: 0 0 auto; height: 44px; padding: 0 16px; border-radius: var(--r-sm); background: var(--bg); border: 1px solid var(--line); font-weight: 600; font-size: 14px; color: var(--text); white-space: nowrap; transition: all var(--t) var(--ease); }
 .time-slots .slot:active { transform: scale(.96); }
-.time-slots .slot.active { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: var(--sh-sm); }
+.time-slots .slot.active { background: var(--grad-btn); border-color: transparent; color: var(--on-gold); box-shadow: var(--sh-sm); }
 
 /* ═══ Telegram-only gate ═══ */
 .tg-gate { position: fixed; inset: 0; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 32px; background: var(--bg); }
-.tg-gate .gate-logo { width: 96px; height: 96px; border-radius: 28px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--sh-lg); margin-bottom: 26px; color: #fff; }
+.tg-gate .gate-logo { width: 96px; height: 96px; border-radius: 28px; background: var(--grad); display: grid; place-items: center; box-shadow: var(--sh-lg); margin-bottom: 26px; color: var(--on-gold); }
 .tg-gate .gate-logo svg { width: 48px; height: 48px; }
 .tg-gate h2 { font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 12px; max-width: 340px; }
 .tg-gate p { color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 320px; }

@@ -10,6 +10,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.filters import BaseFilter, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +26,7 @@ from core.services.i18n import STATUS_LABELS, t
 from core.services.order_service import OrderError
 from core.utils import fmt_money, order_summary_text
 from core.bots.admin import keyboards as kb
+from core.bots.admin.states import CancelOrder
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -84,19 +86,47 @@ async def show_all_orders(message: Message, session: AsyncSession):
     await message.answer("\n".join(lines))
 
 
+async def _apply_status(session, order, to_status, actor_id, reason=None) -> str | None:
+    """Statusni o'zgartiradi va mijozga bildiradi. Xato bo'lsa xato matnini qaytaradi."""
+    try:
+        await order_service.change_status(session, order, to_status, actor_id=actor_id, note=reason)
+    except OrderError as e:
+        return str(e)
+
+    # Mijozga avtomatik xabar (uning tilida) — bekor/rad bo'lsa sabab bilan.
+    lang = await user_service.get_language(session, order.user_id)
+    status_text = t(f"status_{order.status}", lang)
+    msg = f"{status_text}\n{t('order_number', lang)} #{order.order_number}"
+    if reason and order.status in ("canceled", "rejected"):
+        msg += f"\n📝 {t('cancel_reason_label', lang)}: {reason}"
+    await notify_service.notify_customer(order.user_id, msg)
+    return None
+
+
 @router.callback_query(F.data.startswith("os:"))
-async def order_status_change(callback: CallbackQuery, session: AsyncSession):
+async def order_status_change(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     _, to_status, order_id = callback.data.split(":")
     order = await order_service.get_order(session, int(order_id))
     if not order:
         await callback.answer("Buyurtma topilmadi.", show_alert=True)
         return
-    try:
-        await order_service.change_status(session, order, to_status, actor_id=callback.from_user.id)
-    except OrderError as e:
-        await callback.answer(str(e), show_alert=True)
+
+    # Bekor qilish / rad etish → avval sabab so'raymiz.
+    if to_status in ("canceled", "rejected"):
+        await state.set_state(CancelOrder.reason)
+        await state.update_data(order_id=order.id, to_status=to_status)
+        await callback.message.answer(
+            "❓ Bekor qilish sababini yozing (mijozga yuboriladi).\n"
+            "Yoki «⏭ Sababsiz bekor qilish» tugmasini bosing.",
+            reply_markup=kb.cancel_reason_menu(),
+        )
+        await callback.answer()
         return
 
+    err = await _apply_status(session, order, to_status, callback.from_user.id)
+    if err:
+        await callback.answer(err, show_alert=True)
+        return
     currency = await _currency()
     try:
         await callback.message.edit_text(
@@ -108,13 +138,32 @@ async def order_status_change(callback: CallbackQuery, session: AsyncSession):
         pass
     await callback.answer("✅ Holat yangilandi")
 
-    # Mijozga avtomatik xabar (uning tilida).
-    lang = await user_service.get_language(session, order.user_id)
-    status_text = t(f"status_{order.status}", lang)
-    await notify_service.notify_customer(
-        order.user_id,
-        f"{status_text}\n{t('order_number', lang)} #{order.order_number}",
-    )
+
+@router.message(CancelOrder.reason, F.text)
+async def cancel_reason_received(message: Message, session: AsyncSession, state: FSMContext):
+    text = (message.text or "").strip()
+    if text == kb.BTN_CANCEL_ABORT:
+        await state.clear()
+        await message.answer("Bekor qilish to'xtatildi.", reply_markup=kb.main_menu())
+        return
+
+    data = await state.get_data()
+    await state.clear()
+    order_id = data.get("order_id")
+    to_status = data.get("to_status", "canceled")
+    order = await order_service.get_order(session, int(order_id)) if order_id else None
+    if not order:
+        await message.answer("Buyurtma topilmadi.", reply_markup=kb.main_menu())
+        return
+
+    reason = None if text == kb.BTN_CANCEL_SKIP else text[:255]
+    err = await _apply_status(session, order, to_status, message.from_user.id, reason=reason)
+    if err:
+        await message.answer(f"❗️ {err}", reply_markup=kb.main_menu())
+        return
+    label = STATUS_LABELS.get(to_status, to_status)
+    suffix = f"\n📝 Sabab: {reason}" if reason else ""
+    await message.answer(f"✅ Buyurtma #{order.order_number} — {label}{suffix}", reply_markup=kb.main_menu())
 
 
 @router.message(F.text == kb.BTN_STATS)

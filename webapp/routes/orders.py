@@ -83,12 +83,8 @@ async def create_order(payload: OrderIn, request: Request, session: AsyncSession
 
     currency = await settings_service.get("currency", "so'm")
 
-    # Adminlarga yangi buyurtma bildirishnomasi.
-    try:
-        from core.bots.admin.notify import notify_new_order
-        await notify_new_order(order, currency)
-    except Exception as e:
-        logger.warning("Admin bildirishnomasi yuborilmadi: %s", e)
+    # DIQQAT: adminlarga hozir XABAR BERILMAYDI. Buyurtma admin botga faqat
+    # to'lov (yoki offline tanlov) amalga oshirilgach yuboriladi (order_flow.py).
 
     # Mijozga Sotuv bot orqali to'lov tugmasi bilan xabar.
     try:

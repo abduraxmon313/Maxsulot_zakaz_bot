@@ -14,6 +14,17 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "btn_my_orders": {"uz": "📦 Buyurtmalarim", "ru": "📦 Мои заказы", "en": "📦 My orders"},
     "btn_contact": {"uz": "☎️ Aloqa", "ru": "☎️ Контакты", "en": "☎️ Contact"},
     "btn_language": {"uz": "🌐 Til", "ru": "🌐 Язык", "en": "🌐 Language"},
+    "btn_shop_address": {"uz": "📍 Do'kon manzili", "ru": "📍 Адрес магазина", "en": "📍 Shop address"},
+    "shop_address_none": {
+        "uz": "Do'kon manzili hozircha kiritilmagan.",
+        "ru": "Адрес магазина пока не указан.",
+        "en": "The shop address is not set yet.",
+    },
+    "shop_address_caption": {
+        "uz": "📍 <b>Do'kon manzili</b>\n{note}\n\n🗺 <a href=\"{link}\">Yandex xaritada ochish</a>",
+        "ru": "📍 <b>Адрес магазина</b>\n{note}\n\n🗺 <a href=\"{link}\">Открыть в Яндекс.Картах</a>",
+        "en": "📍 <b>Shop address</b>\n{note}\n\n🗺 <a href=\"{link}\">Open in Yandex Maps</a>",
+    },
     "choose_language": {"uz": "Tilni tanlang:", "ru": "Выберите язык:", "en": "Choose language:"},
     "language_set": {"uz": "✅ Til o'zgartirildi.", "ru": "✅ Язык изменён.", "en": "✅ Language updated."},
     "no_orders": {"uz": "Sizda hali buyurtmalar yo'q.", "ru": "У вас пока нет заказов.", "en": "You have no orders yet."},
@@ -57,6 +68,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "status_rejected": {"uz": "❌ Buyurtmangiz rad etildi", "ru": "❌ Заказ отклонён", "en": "❌ Order rejected"},
 
     "order_number": {"uz": "Buyurtma", "ru": "Заказ", "en": "Order"},
+    "cancel_reason_label": {"uz": "Sabab", "ru": "Причина", "en": "Reason"},
 
     # ── Buyurtma / to'lov oqimi ──
     "order_empty": {
@@ -84,6 +96,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "order_already_paid": {"uz": "Bu buyurtma allaqachon to'langan.", "ru": "Этот заказ уже оплачен.", "en": "This order is already paid."},
     "order_not_found": {"uz": "Buyurtma topilmadi.", "ru": "Заказ не найден.", "en": "Order not found."},
+    "pay_offline": {"uz": "💵 Naqd (yetkazishda)", "ru": "💵 Наличными (при доставке)", "en": "💵 Cash (on delivery)"},
+    "order_offline_ok": {
+        "uz": "✅ Buyurtmangiz qabul qilindi!\nTo'lov: 💵 Naqd (yetkazishda to'laysiz).\n\nBuyurtma #{number} tez orada tasdiqlanadi. Rahmat! 🙌",
+        "ru": "✅ Ваш заказ принят!\nОплата: 💵 Наличными (при доставке).\n\nЗаказ #{number} скоро будет подтверждён. Спасибо! 🙌",
+        "en": "✅ Your order is accepted!\nPayment: 💵 Cash (on delivery).\n\nOrder #{number} will be confirmed soon. Thank you! 🙌",
+    },
     "dtype_delivery": {"uz": "🚚 Yetkazib berish", "ru": "🚚 Доставка", "en": "🚚 Delivery"},
     "dtype_pickup": {"uz": "🏃 Olib ketish", "ru": "🏃 Самовывоз", "en": "🏃 Pickup"},
 }

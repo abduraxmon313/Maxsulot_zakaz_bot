@@ -49,6 +49,7 @@ const ICONS = {
   bag: '<svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
   pin: '<svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
   locate: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  alert: '<svg viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
 };
 
 function applyIcons(root) {
@@ -107,6 +108,8 @@ const I18N = {
   asap: { uz: 'Imkon qadar tez', ru: 'Как можно скорее', en: 'As soon as possible' },
   gate_title: { uz: 'Do\'kon faqat Telegram orqali ochiladi', ru: 'Магазин открывается только через Telegram', en: 'The shop opens only via Telegram' },
   gate_text: { uz: 'Iltimos, do\'kon botini oching va «Do\'konni ochish» tugmasi orqali kiring.', ru: 'Пожалуйста, откройте бота магазина и войдите через кнопку «Открыть магазин».', en: 'Please open the shop bot and enter via the “Open shop” button.' },
+  map_error: { uz: 'Xarita yuklashda xatolik. Yetkazib berish uchun manzil tanlab bo\'lmaydi — faqat «Olib ketish» mavjud.', ru: 'Ошибка загрузки карты. Адрес доставки выбрать нельзя — доступен только «Самовывоз».', en: 'Map failed to load. Delivery address can\'t be selected — only “Pickup” is available.' },
+  loc_fail: { uz: 'Joylashuvni aniqlab bo\'lmadi', ru: 'Не удалось определить локацию', en: 'Could not detect location' },
 };
 const ST = {
   created: { uz: 'Yangi', ru: 'Новый', en: 'New' }, confirmed: { uz: 'Tasdiqlandi', ru: 'Подтверждён', en: 'Confirmed' },
@@ -264,9 +267,13 @@ function locateMeYandex(btn) {
   );
 }
 
-/* ── Checkout: yetkazish turi + Yandex xarita manzil + saqlab to'lovga o'tish ── */
+/* ── Checkout: yetkazish turi + Yandex xarita manzil + saqlab to'lovga o'tish ──
+   Xarita yuklanmasa → ogohlantirish + faqat «Olib ketish» (yetkazib berish bloklanadi). */
 function openCheckout() {
   const hasMap = !!(State.config && State.config.maps_api_key);
+  State._mapOk = hasMap;         // optimistik; xarita yuklanmasa false bo'ladi
+  let deliveryType = 'delivery';
+
   el('checkoutContent').innerHTML = `
     <div class="field"><label>${L('delivery_type')}</label>
       <div class="seg" id="segDelivery">
@@ -274,8 +281,10 @@ function openCheckout() {
         <button data-v="pickup"><span data-ic="run"></span>${L('pickup')}</button>
       </div>
     </div>
+    <div id="mapWarn" class="map-warn" hidden><span data-ic="alert"></span><span>${L('map_error')}</span></div>
     <div id="addrBlock">
-      ${hasMap ? `<div class="map-wrap"><div id="mapEl"></div><div class="map-pin">${MAP_PIN_SVG}</div><button type="button" class="map-locate" id="locBtn" data-ic="locate"></button><div id="mapLoading" class="map-loading"><div class="spinner"></div></div></div><p class="map-hint">${L('map_hint')}</p>` : ''}
+      <div class="map-wrap"><div id="mapEl"></div><div class="map-pin">${MAP_PIN_SVG}</div><button type="button" class="map-locate" id="locBtn" data-ic="locate"></button><div id="mapLoading" class="map-loading"><div class="spinner"></div></div></div>
+      <p class="map-hint">${L('map_hint')}</p>
       <div class="field"><label>${L('address_label')}</label><input id="afAddress" placeholder="${L('address_ph')}" /></div>
       <div class="field"><input id="afLandmark" placeholder="${L('landmark')}" /></div>
     </div>
@@ -283,22 +292,48 @@ function openCheckout() {
     <div class="field"><label>${L('note')}</label><textarea id="ckNote" placeholder="${L('note')}"></textarea></div>
     <div id="ckSummary"></div>
     <button class="btn" id="submitOrder"><span data-ic="bag"></span>${L('save_and_pay')}</button>`;
-  let deliveryType = 'delivery';
+
   const segD = el('segDelivery'), addrBlock = el('addrBlock');
-  const syncAddr = () => { addrBlock.style.display = deliveryType === 'delivery' ? '' : 'none'; };
-  segD.querySelectorAll('button').forEach(b => b.onclick = () => { segD.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); deliveryType = b.dataset.v; syncAddr(); renderSummary(deliveryType); });
+  const setType = (v) => {
+    deliveryType = v;
+    segD.querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.v === v));
+    addrBlock.style.display = (v === 'delivery') ? '' : 'none';
+    renderSummary(v);
+  };
+  segD.querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (b.dataset.v === 'delivery' && !State._mapOk) { toast(L('map_error')); haptic('medium'); return; }
+    setType(b.dataset.v);
+  });
+
+  // Xarita ishlamaydigan holatga o'tkazish: faqat «Olib ketish».
+  const forcePickupOnly = () => {
+    State._mapOk = false;
+    const dBtn = segD.querySelector('[data-v="delivery"]');
+    if (dBtn) { dBtn.classList.add('disabled'); dBtn.setAttribute('aria-disabled', 'true'); }
+    const warn = el('mapWarn'); if (warn) { warn.hidden = false; applyIcons(warn); }
+    const wrap = document.querySelector('.map-wrap'); if (wrap) wrap.style.display = 'none';
+    const hint = document.querySelector('.map-hint'); if (hint) hint.style.display = 'none';
+    setType('pickup');
+  };
+
   applyIcons(el('checkoutContent'));
   renderTimeSlots();
-  syncAddr();
-  renderSummary(deliveryType);
+  setType('delivery');
   el('submitOrder').onclick = () => submitOrder(deliveryType);
   openSheet('sheetCheckout');
-  if (hasMap) {
-    const locBtn = el('locBtn'); if (locBtn) locBtn.onclick = () => locateMeYandex(locBtn);
-    loadYandexMaps()
-      .then(() => { requestAnimationFrame(() => setTimeout(() => { initAddressMap(el('mapEl')); const ld = el('mapLoading'); if (ld) ld.style.display = 'none'; }, 100)); })
-      .catch(() => { const w = el('mapEl'); const wrap = w && w.closest('.map-wrap'); if (wrap) wrap.style.display = 'none'; const hint = document.querySelector('.map-hint'); if (hint) hint.style.display = 'none'; });
-  }
+
+  if (!hasMap) { forcePickupOnly(); return; }
+
+  const locBtn = el('locBtn'); if (locBtn) locBtn.onclick = () => locateMeYandex(locBtn);
+  loadYandexMaps()
+    .then(() => {
+      requestAnimationFrame(() => setTimeout(() => {
+        initAddressMap(el('mapEl'));
+        const ld = el('mapLoading'); if (ld) ld.style.display = 'none';
+        if (!State._map) forcePickupOnly();   // init ichida xato bo'lsa
+      }, 100));
+    })
+    .catch(() => forcePickupOnly());
 }
 function renderTimeSlots() {
   const wrap = el('timeSlots'); if (!wrap) return;
@@ -323,6 +358,7 @@ function submitOrder(deliveryType) {
   if (min && cartItemsTotal() < min) { toast(L('min_order') + ': ' + money(min)); return; }
   let address = null, lat = null, lng = null;
   if (deliveryType === 'delivery') {
+    if (!State._mapOk) { toast(L('map_error')); return; }   // xarita ishlamasa yetkazib berish yo'q
     const base = (el('afAddress') && el('afAddress').value.trim()) || State._pickAddr || '';
     const landmark = (el('afLandmark') && el('afLandmark').value.trim()) || '';
     address = [base, landmark].filter(Boolean).join(', ');
@@ -436,7 +472,7 @@ function setLang(lang) {
 function applyTheme() {
   // Rang butunlay CSS (brend palitrasi) tomonidan boshqariladi — DB'dagi eski
   // primary_color (masalan sovuq #7000FF) endi QO'LLANILMAYDI.
-  if (tg) { try { tg.setHeaderColor && tg.setHeaderColor('#F8F5EF'); tg.setBackgroundColor && tg.setBackgroundColor('#F8F5EF'); } catch (e) {} }
+  if (tg) { try { tg.setHeaderColor && tg.setHeaderColor('#FFFDF8'); tg.setBackgroundColor && tg.setBackgroundColor('#FFFDF8'); } catch (e) {} }
 }
 
 /* Faqat Telegram orqali ochilishi kerak — aks holda "gate" ekran ko'rsatiladi. */
