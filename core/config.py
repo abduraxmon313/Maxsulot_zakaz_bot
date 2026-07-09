@@ -101,6 +101,10 @@ PUBLIC_BASE_URL = (
 # Mini App ochiladigan to'liq URL (Telegram WebApp tugmasi uchun).
 WEBAPP_URL = (os.getenv("WEBAPP_URL", "").strip() or PUBLIC_BASE_URL).rstrip("/")
 
+# Google Maps JavaScript API kaliti (manzil tanlash xaritasi uchun).
+# Bo'sh bo'lsa Mini App manzilni qo'lda kiritishga o'tadi.
+GOOGLE_MAPS_API_KEY = (os.getenv("GOOGLE_MAPS_API_KEY", "") or "").strip()
+
 
 # ─────────────────────────────────────────────────────────────
 #  XAVFSIZLIK

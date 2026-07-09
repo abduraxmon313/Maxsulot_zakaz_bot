@@ -270,246 +270,202 @@ function openAddressSheet() {
   el('newAddrBtn').onclick = openMapStep;
   openSheet('sheetAddress');
 }
+/* ─────────────── Google Maps ─────────────── */
+// Google Maps JS API'ni dinamik yuklaymiz (config'dagi kalit bilan). Bir marta.
+let _gmapsPromise = null;
+function loadGoogleMaps() {
+  if (window.google && window.google.maps) return Promise.resolve();
+  if (_gmapsPromise) return _gmapsPromise;
+  const key = (State.config && State.config.maps_api_key) || '';
+  if (!key) return Promise.reject(new Error('no_api_key'));
+  _gmapsPromise = new Promise((resolve, reject) => {
+    window.__gmapsReady = () => resolve();
+    const s = document.createElement('script');
+    const params = new URLSearchParams({
+      key,
+      libraries: 'marker,geocoding',
+      language: State.lang || 'uz',
+      region: 'UZ',
+      loading: 'async',
+      callback: '__gmapsReady',
+    });
+    s.src = 'https://maps.googleapis.com/maps/api/js?' + params.toString();
+    s.async = true;
+    s.defer = true;
+    s.onerror = () => { _gmapsPromise = null; reject(new Error('gmaps_load_failed')); };
+    document.head.appendChild(s);
+    // Xavfsizlik uchun timeout
+    setTimeout(() => { if (!(window.google && window.google.maps)) { /* hali yuklanmagan bo'lishi mumkin */ } }, 12000);
+  });
+  return _gmapsPromise;
+}
+
 function openMapStep() {
-  // Leaflet kutubxonasi yuklanishini kutamiz
-  if (!window.L) {
-    console.warn('Leaflet not loaded yet, waiting...');
-    let attempts = 0;
-    const maxAttempts = 10;
-    const checkLeaflet = setInterval(() => {
-      attempts++;
-      if (window.L) {
-        clearInterval(checkLeaflet);
-        console.log('Leaflet loaded successfully!');
-        openMapStep(); // Qayta chaqiramiz
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkLeaflet);
-        console.error('Leaflet failed to load after', maxAttempts, 'attempts');
-        State._pickLat = null; 
-        State._pickLng = null; 
-        State._pickStreet = ''; 
-        toast(L('map_unavailable'));
-        openAddressForm(true);
-      }
-    }, 300);
+  const key = (State.config && State.config.maps_api_key) || '';
+  // Kalit yo'q bo'lsa — xaritasiz, qo'lda kiritish.
+  if (!key) {
+    State._pickLat = null;
+    State._pickLng = null;
+    State._pickStreet = '';
+    openAddressForm(true);
     return;
   }
-  
+
   el('addressContent').innerHTML = `
     <div class="map-step">
       <h2 class="sheet-title">${L('add_address_title')}</h2>
-      <div class="map-wrap"><div id="mapEl"></div><div class="map-pin" style="color:var(--primary)">${IC.mapPin}</div><button class="map-locate" id="locBtn" type="button">${IC.locate}</button></div>
+      <div class="map-wrap"><div id="mapEl"></div><div class="map-pin" style="color:var(--primary)">${IC.mapPin}</div><button class="map-locate" id="locBtn" type="button">${IC.locate}</button><div id="mapLoading" class="map-loading"><div class="spinner"></div></div></div>
       <div class="map-hint">${L('map_hint')}</div>
       <button class="btn" id="mapContinue">${L('continue')}</button>
     </div>`;
   openSheet('sheetAddress');
-  // Xaritani har safar QAYTA yaratamiz va katta timeout beramiz
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      initMap();
-      // Sheet ochilganidan keyin qayta resize qilamiz
-      setTimeout(() => {
-        if (State._map) {
-          try {
-            State._map.invalidateSize();
-            // Default joyni o'rnatamiz
-            const start = (State.currentAddress && State.currentAddress.lat) 
-              ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng } 
-              : TASHKENT;
-            State._map.setView([start.lat, start.lng], 15);
-          } catch (e) {
-            console.error('Map resize error:', e);
-          }
-        }
-      }, 200);
-    }, 100);
-  });
-  
+
   el('locBtn').onclick = locateMe;
   el('mapContinue').onclick = () => {
     let lat = TASHKENT.lat, lng = TASHKENT.lng;
-    if (State._map) { 
-      try {
-        const c = State._map.getCenter(); 
-        lat = c.lat; 
-        lng = c.lng; 
-      } catch (e) {
-        console.error('Map getCenter error:', e);
-      }
+    if (State._map) {
+      try { const c = State._map.getCenter(); lat = c.lat(); lng = c.lng(); } catch (e) { console.error('getCenter error', e); }
     }
-    State._pickLat = lat; 
-    State._pickLng = lng; 
+    State._pickLat = lat;
+    State._pickLng = lng;
     State._pickStreet = '';
     openAddressForm(false);
-    reverseGeocode(lat, lng).then(s => { 
-      const inp = el('afStreet'); 
-      if (s && inp && !inp.value) inp.value = s; 
+    reverseGeocode(lat, lng).then(s => {
+      const inp = el('afStreet');
+      if (s && inp && !inp.value) inp.value = s;
     }).catch(e => console.error('Reverse geocode error:', e));
   };
+
+  // Google Maps'ni yuklab, xaritani ishga tushiramiz.
+  loadGoogleMaps()
+    .then(() => { requestAnimationFrame(() => setTimeout(initMap, 60)); })
+    .catch((e) => {
+      console.error('Google Maps load error:', e);
+      toast(L('map_unavailable'));
+      State._pickLat = null; State._pickLng = null; State._pickStreet = '';
+      openAddressForm(true);
+    });
 }
+
 function initMap() {
   const node = el('mapEl');
-  if (!node || !window.L) {
-    console.error('Map element or Leaflet not found');
+  if (!node || !(window.google && window.google.maps)) {
+    console.error('Map element or Google Maps not ready');
+    toast(L('map_unavailable'));
+    openAddressForm(true);
     return;
   }
-  
-  // Eski xaritani to'liq olib tashlaymiz
-  try { 
-    if (State._map) { 
-      State._map.remove(); 
-      State._map = null; 
-    } 
-  } catch (e) {
-    console.error('Error removing old map:', e);
-  }
-  
-  // Yangi xaritani yaratamiz
   try {
-    const start = (State.currentAddress && State.currentAddress.lat) 
-      ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng } 
+    const start = (State.currentAddress && State.currentAddress.lat)
+      ? { lat: State.currentAddress.lat, lng: State.currentAddress.lng }
       : TASHKENT;
-    
-    State._map = L.map(node, { 
-      zoomControl: false, 
-      attributionControl: false,
-      preferCanvas: true,
-      tap: true,
-      touchZoom: true,
-      dragging: true,
-      scrollWheelZoom: true
-    }).setView([start.lat, start.lng], 15);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-      maxZoom: 19, 
-      subdomains: 'abc',
-      detectRetina: true
-    }).addTo(State._map);
-    
-    // Xarita to'liq yuklanganidan keyin resize qilamiz
-    State._map.whenReady(() => {
-      setTimeout(() => {
-        try {
-          if (State._map) {
-            State._map.invalidateSize();
-          }
-        } catch (e) {
-          console.error('Map invalidate error:', e);
-        }
-      }, 100);
+
+    State._map = new google.maps.Map(node, {
+      center: start,
+      zoom: 16,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: 'greedy',
+      clickableIcons: false,
+      keyboardShortcuts: false,
+      mapId: 'DEMO_MAP_ID',
     });
-    
-    // Qo'shimcha resize attempts
-    [100, 300, 500, 1000].forEach(ms => {
-      setTimeout(() => { 
-        try { 
-          if (State._map) {
-            State._map.invalidateSize();
-          }
-        } catch (e) {
-          console.error('Map resize error:', e);
-        } 
-      }, ms);
+
+    const loading = el('mapLoading');
+    google.maps.event.addListenerOnce(State._map, 'idle', () => {
+      if (loading) loading.style.display = 'none';
     });
-    
-    console.log('Map initialized successfully');
+
+    console.log('Google Map initialized');
   } catch (e) {
-    console.error('Error initializing map:', e);
+    console.error('Error initializing Google Map:', e);
     toast(L('map_unavailable'));
-  }
-}
-function locateMe() {
-  if (!navigator.geolocation) { 
-    toast(L('loc_fail')); 
-    return; 
-  }
-  
-  const btn = el('locBtn'); 
-  if (!btn) return;
-  
-  const orig = btn.innerHTML; 
-  btn.innerHTML = '⏳';
-  btn.disabled = true;
-  
-  console.log('Requesting geolocation...');
-  
-  // Telegram WebApp location API ni birinchi urinib ko'ramiz
-  if (tg && tg.LocationManager && tg.LocationManager.isLocationAvailable) {
-    try {
-      tg.LocationManager.getLocation((location) => {
-        if (location) {
-          console.log('Telegram location success:', location.latitude, location.longitude);
-          if (State._map) {
-            try {
-              State._map.setView([location.latitude, location.longitude], 17);
-              haptic('medium');
-              toast('✓ Joylashuv aniqlandi');
-            } catch (e) {
-              console.error('Error setting map view:', e);
-            }
-          }
-          btn.innerHTML = orig; 
-          btn.disabled = false;
-          return;
-        }
-        // Agar Telegram location ishlamasa, standart geolocation'ga o'tamiz
-        useStandardGeolocation(btn, orig);
-      });
-    } catch (e) {
-      console.log('Telegram location not available, using standard geolocation');
-      useStandardGeolocation(btn, orig);
-    }
-  } else {
-    useStandardGeolocation(btn, orig);
+    openAddressForm(true);
   }
 }
 
-function useStandardGeolocation(btn, orig) {
-  navigator.geolocation.getCurrentPosition(
-    (pos) => { 
-      console.log('Geolocation success:', pos.coords.latitude, pos.coords.longitude);
-      if (State._map) {
-        try {
-          State._map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+function panMapTo(lat, lng, zoom) {
+  if (!State._map) return;
+  try {
+    State._map.panTo({ lat, lng });
+    if (zoom) State._map.setZoom(zoom);
+  } catch (e) { console.error('panMapTo error', e); }
+}
+
+function locateMe() {
+  const btn = el('locBtn');
+  if (!btn) return;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳';
+  btn.disabled = true;
+  const done = () => { btn.innerHTML = orig; btn.disabled = false; };
+
+  // 1) Telegram WebApp LocationManager (mavjud bo'lsa)
+  const lm = tg && tg.LocationManager;
+  if (lm && (lm.isInited || lm.isLocationAvailable)) {
+    try {
+      const req = () => lm.getLocation((loc) => {
+        if (loc && typeof loc.latitude === 'number') {
+          panMapTo(loc.latitude, loc.longitude, 17);
           haptic('medium');
           toast('✓ Joylashuv aniqlandi');
-        } catch (e) {
-          console.error('Error setting map view:', e);
+          done();
+        } else {
+          useStandardGeolocation(btn, orig, done);
         }
-      } else {
-        console.error('Map not initialized');
-        toast(L('loc_fail'));
-      }
-      btn.innerHTML = orig; 
-      btn.disabled = false;
-    },
-    (error) => { 
-      console.error('Geolocation error:', error.code, error.message);
-      btn.innerHTML = orig; 
-      btn.disabled = false;
-      
-      let errorMsg = L('loc_fail');
-      switch(error.code) {
-        case error.PERMISSION_DENIED:
-          errorMsg = 'Joylashuv ruxsati berilmagan';
-          break;
-        case error.POSITION_UNAVAILABLE:
-          errorMsg = 'Joylashuvni aniqlab bo\'lmadi';
-          break;
-        case error.TIMEOUT:
-          errorMsg = 'Vaqt tugadi, qaytadan urinib ko\'ring';
-          break;
-      }
-      toast(errorMsg);
-    },
-    { 
-      enableHighAccuracy: true, 
-      timeout: 15000, 
-      maximumAge: 0 
+      });
+      if (!lm.isInited && typeof lm.init === 'function') { lm.init(req); }
+      else { req(); }
+      return;
+    } catch (e) {
+      console.log('Telegram LocationManager failed, fallback to browser geolocation');
     }
+  }
+
+  useStandardGeolocation(btn, orig, done);
+}
+
+function useStandardGeolocation(btn, orig, done) {
+  done = done || (() => { if (btn) { btn.innerHTML = orig; btn.disabled = false; } });
+  if (!navigator.geolocation) { toast(L('loc_fail')); done(); return; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      panMapTo(pos.coords.latitude, pos.coords.longitude, 17);
+      haptic('medium');
+      toast('✓ Joylashuv aniqlandi');
+      done();
+    },
+    (error) => {
+      console.error('Geolocation error:', error.code, error.message);
+      let msg = L('loc_fail');
+      if (error.code === error.PERMISSION_DENIED) msg = 'Joylashuv ruxsati berilmagan';
+      else if (error.code === error.POSITION_UNAVAILABLE) msg = 'Joylashuvni aniqlab bo\'lmadi';
+      else if (error.code === error.TIMEOUT) msg = 'Vaqt tugadi, qaytadan urinib ko\'ring';
+      toast(msg);
+      done();
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
 }
+
 async function reverseGeocode(lat, lng) {
+  // 1) Google Geocoder (agar yuklangan bo'lsa)
+  try {
+    if (window.google && google.maps && google.maps.Geocoder) {
+      const geocoder = new google.maps.Geocoder();
+      const resp = await geocoder.geocode({ location: { lat, lng } });
+      const results = resp && resp.results;
+      if (results && results.length) {
+        const r = results[0];
+        // Ko'cha + uy raqamini ajratib olishga urinamiz
+        const comp = {};
+        (r.address_components || []).forEach(c => { (c.types || []).forEach(t => { comp[t] = c.long_name; }); });
+        const line = [comp.route, comp.street_number, comp.neighborhood || comp.sublocality].filter(Boolean).join(', ');
+        return line || r.formatted_address || '';
+      }
+    }
+  } catch (e) { console.error('Google reverse geocode failed:', e); }
+  // 2) Nominatim zaxira varianti
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${State.lang}&zoom=18`);
     const j = await r.json(); const a = j.address || {};
@@ -570,7 +526,7 @@ function renderProfile() {
 
 /* Sheets */
 function openSheet(id) { el(id).classList.add('open'); if (tg && tg.BackButton) tg.BackButton.show(); }
-function closeSheets() { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); try { if (State._map) { State._map.remove(); State._map = null; } } catch (e) {} if (tg && tg.BackButton) tg.BackButton.hide(); }
+function closeSheets() { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); try { if (State._map) { State._map = null; const n = el('mapEl'); if (n) n.innerHTML = ''; } } catch (e) {} if (tg && tg.BackButton) tg.BackButton.hide(); }
 
 /* Nav */
 function switchView(view) {
@@ -631,34 +587,4 @@ function bindEvents() {
 }
 
 bindEvents();
-
-// Debug: Check if Leaflet is loaded
-console.log('=== DEBUG INFO ===');
-console.log('Leaflet (window.L) loaded:', typeof window.L !== 'undefined');
-console.log('Leaflet version:', window.L ? window.L.version : 'N/A');
-console.log('Document ready state:', document.readyState);
-console.log('==================');
-
-// Wait for Leaflet to be fully loaded
-if (typeof window.L !== 'undefined') {
-  console.log('✅ Leaflet is ready, initializing app...');
-  init();
-} else {
-  console.warn('⚠️ Leaflet not loaded yet, waiting...');
-  let attempts = 0;
-  const maxAttempts = 20;
-  const checkInterval = setInterval(() => {
-    attempts++;
-    console.log(`Checking for Leaflet... attempt ${attempts}/${maxAttempts}`);
-    if (typeof window.L !== 'undefined') {
-      clearInterval(checkInterval);
-      console.log('✅ Leaflet loaded successfully!');
-      init();
-    } else if (attempts >= maxAttempts) {
-      clearInterval(checkInterval);
-      console.error('❌ Leaflet failed to load after', maxAttempts, 'attempts');
-      console.error('Continuing without map functionality...');
-      init(); // Init anyway, map will fallback to manual entry
-    }
-  }, 200);
-}
+init();

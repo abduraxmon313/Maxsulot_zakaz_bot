@@ -242,6 +242,18 @@ img { display: block; }
   cursor: not-allowed;
 }
 .map-locate svg { width: 22px; height: 22px; }
+.map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ebf0;
+}
+/* Google Maps ichki elementlar to'g'ri ko'rinishi uchun */
+#mapEl img { max-width: none; }
+#mapEl .gm-style { border-radius: var(--r); }
 .map-hint { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; line-height: 1.4; padding: 0 8px; }
 .map-fallback { background: var(--bg); border-radius: var(--r); padding: 16px; text-align: center; color: var(--text-2); font-size: 14px; margin-bottom: 14px; }
 

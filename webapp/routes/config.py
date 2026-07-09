@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from core.config import SUPPORTED_LANGUAGES
+from core.config import GOOGLE_MAPS_API_KEY, SUPPORTED_LANGUAGES
 from core.services import settings_service
 
 router = APIRouter()
@@ -22,6 +22,7 @@ async def get_config():
         "delivery_fee": int(s.get("delivery_fee", "0") or 0),
         "free_delivery_from": int(s.get("free_delivery_from", "0") or 0),
         "primary_color": s.get("primary_color", "#7000FF"),
+        "maps_api_key": GOOGLE_MAPS_API_KEY,
         "languages": SUPPORTED_LANGUAGES,
         "welcome": {
             "uz": s.get("welcome_uz", ""),
