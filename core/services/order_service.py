@@ -228,19 +228,24 @@ async def get_order(session: AsyncSession, order_id: int) -> Order | None:
     return await session.get(Order, order_id)
 
 
-async def mark_paid(session: AsyncSession, order: Order, provider: str) -> Order:
-    """Buyurtmani to'langan deb belgilaydi (to'lov provayderi nomi bilan).
+async def set_payment(session: AsyncSession, order: Order, provider: str, is_paid: bool) -> Order:
+    """Buyurtmaga to'lov usulini belgilaydi.
 
-    Hozircha haqiqiy to'lov integratsiyasi yo'q — provayder tanlansa buyurtma
-    to'langan hisoblanadi. Keyinchalik bu yerda provayder API'si chaqiriladi.
+    - Onlayn (click/payme/uzum/paylov) → is_paid=True (hozircha avtomatik; keyin API).
+    - offline (naqd) → is_paid=False, yetkazishda to'lanadi.
+    payment_method ustuni String(12) — bu nomlar sig'adi.
     """
-    order.is_paid = True
-    order.paid_at = datetime.utcnow()
-    # payment_method ustuni String(12) — provayder nomlari (click/uzum/payme/paylov) sig'adi.
     order.payment_method = (provider or "online")[:12]
+    order.is_paid = bool(is_paid)
+    order.paid_at = datetime.utcnow() if is_paid else None
     await session.commit()
     await session.refresh(order)
     return order
+
+
+async def mark_paid(session: AsyncSession, order: Order, provider: str) -> Order:
+    """Buyurtmani to'langan deb belgilaydi (moslik uchun)."""
+    return await set_payment(session, order, provider, is_paid=True)
 
 
 async def list_orders(

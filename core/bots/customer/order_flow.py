@@ -82,24 +82,32 @@ async def do_payment(callback: CallbackQuery, session: AsyncSession):
             pass
         return
 
-    await callback.answer(t("paying", lang))
-    await order_service.mark_paid(session, order, provider)
+    is_offline = provider == "offline"
+    if not is_offline:
+        await callback.answer(t("paying", lang))
+    else:
+        await callback.answer()
+
+    # Onlayn → to'langan; offline (naqd) → yetkazishda to'lanadi.
+    await order_service.set_payment(session, order, provider, is_paid=not is_offline)
 
     label = PROVIDER_LABELS.get(provider, provider.capitalize())
     currency = await settings_service.get("currency", "so'm")
-    success = t("payment_success", lang, provider=label, number=order.order_number)
+
+    # Mijozga tasdiq.
+    if is_offline:
+        success = t("order_offline_ok", lang, number=order.order_number)
+    else:
+        success = t("payment_success", lang, provider=label, number=order.order_number)
     try:
         await callback.message.edit_text(success, reply_markup=None)
     except Exception:
         await callback.message.answer(success)
 
-    # Adminlarga to'lov haqida xabar.
+    # ENDI buyurtma admin botga to'liq (amal tugmalari bilan) yuboriladi.
     try:
-        text = (
-            f"💰 <b>To'lov qabul qilindi</b>\n"
-            f"Buyurtma #{order.order_number} · {label}\n"
-            f"Summa: {fmt_money(order.grand_total, currency)}"
-        )
-        await notify_service.notify_admins(text)
+        fresh = await order_service.get_order(session, order.id)
+        from core.bots.admin.notify import notify_new_order
+        await notify_new_order(fresh or order, currency)
     except Exception as e:
-        logger.warning("Admin to'lov bildirishnomasi yuborilmadi: %s", e)
+        logger.warning("Admin buyurtma bildirishnomasi yuborilmadi: %s", e)

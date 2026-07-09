@@ -33,7 +33,10 @@ def main_menu(lang: str) -> ReplyKeyboardMarkup:
         KeyboardButton(text=t("btn_my_orders", lang)),
         KeyboardButton(text=t("btn_contact", lang)),
     ])
-    rows.append([KeyboardButton(text=t("btn_language", lang))])
+    rows.append([
+        KeyboardButton(text=t("btn_shop_address", lang)),
+        KeyboardButton(text=t("btn_language", lang)),
+    ])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
 
 
@@ -45,7 +48,7 @@ def language_inline() -> InlineKeyboardMarkup:
     ]])
 
 
-# To'lov provayderlari (hozircha tanlangan har qaysisi "to'landi" deb hisoblanadi;
+# Onlayn to'lov provayderlari (hozircha tanlansa "to'landi" deb hisoblanadi;
 # keyinroq haqiqiy API integratsiyasi qo'shiladi).
 PAYMENT_PROVIDERS = [
     ("click", "Click"),
@@ -63,7 +66,7 @@ def pay_start(order_id: int, lang: str) -> InlineKeyboardMarkup:
 
 
 def payment_providers(order_id: int, lang: str) -> InlineKeyboardMarkup:
-    """To'lov usulini tanlash (Click / Payme / Uzum / Paylov) — 2 ustun."""
+    """To'lov usulini tanlash: Click / Payme / Uzum / Paylov (onlayn) + Naqd (offline)."""
     rows: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
     for code, label in PAYMENT_PROVIDERS:
@@ -73,6 +76,8 @@ def payment_providers(order_id: int, lang: str) -> InlineKeyboardMarkup:
             row = []
     if row:
         rows.append(row)
+    # Offline (naqd) — alohida, keng qatorda.
+    rows.append([InlineKeyboardButton(text=t("pay_offline", lang), callback_data=f"paym:offline:{order_id}")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

@@ -15,9 +15,11 @@ BTN_ADD_CATEGORY = "➕ Kategoriya"
 BTN_CATEGORIES = "🗂 Kategoriyalar"
 BTN_ANALYTICS = "📊 Analitika"
 BTN_TOGGLE_OPEN = "🔓 Do'kon holati"
+BTN_SHOP_LOCATION = "📍 Do'kon manzili"
 BTN_STATUS = "ℹ️ Tizim holati"
 BTN_CANCEL = "❌ Bekor qilish"
 BTN_SKIP = "⏭ O'tkazib yuborish"
+BTN_SEND_LOCATION = "📍 Lokatsiyani yuborish"
 
 # Tahrirlanadigan sozlamalar: kalit -> (yorliq, tur). tur: text | int | image
 EDITABLE_SETTINGS: list[tuple[str, str, str]] = [
@@ -46,7 +48,7 @@ def main_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BTN_ADD_PRODUCT), KeyboardButton(text=BTN_PRODUCTS)],
             [KeyboardButton(text=BTN_ADD_CATEGORY), KeyboardButton(text=BTN_CATEGORIES)],
             [KeyboardButton(text=BTN_ANALYTICS), KeyboardButton(text=BTN_TOGGLE_OPEN)],
-            [KeyboardButton(text=BTN_STATUS)],
+            [KeyboardButton(text=BTN_SHOP_LOCATION), KeyboardButton(text=BTN_STATUS)],
         ],
         resize_keyboard=True,
     )
@@ -54,6 +56,17 @@ def main_menu() -> ReplyKeyboardMarkup:
 
 def cancel_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text=BTN_CANCEL)]], resize_keyboard=True)
+
+
+def location_request_menu() -> ReplyKeyboardMarkup:
+    """Do'kon lokatsiyasini yuborish uchun (request_location)."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=BTN_SEND_LOCATION, request_location=True)],
+            [KeyboardButton(text=BTN_CANCEL)],
+        ],
+        resize_keyboard=True,
+    )
 
 
 def skip_menu() -> ReplyKeyboardMarkup:

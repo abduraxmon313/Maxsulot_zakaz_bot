@@ -11,6 +11,8 @@ from aiogram.types import (
 BTN_NEW_ORDERS = "🆕 Yangi buyurtmalar"
 BTN_ALL_ORDERS = "📋 Barcha buyurtmalar"
 BTN_STATS = "📊 Statistika"
+BTN_CANCEL_SKIP = "⏭ Sababsiz bekor qilish"
+BTN_CANCEL_ABORT = "◀️ Ortga"
 
 
 def main_menu() -> ReplyKeyboardMarkup:
@@ -18,6 +20,16 @@ def main_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=BTN_NEW_ORDERS)],
             [KeyboardButton(text=BTN_ALL_ORDERS), KeyboardButton(text=BTN_STATS)],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def cancel_reason_menu() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=BTN_CANCEL_SKIP)],
+            [KeyboardButton(text=BTN_CANCEL_ABORT)],
         ],
         resize_keyboard=True,
     )

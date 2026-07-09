@@ -1,6 +1,23 @@
 """Umumiy yordamchi funksiyalar (formatlash)."""
 from __future__ import annotations
 
+# To'lov usuli yorliqlari (bot xabarlarida ko'rsatiladi).
+PAYMENT_LABELS = {
+    "click": "Click",
+    "payme": "Payme",
+    "uzum": "Uzum",
+    "paylov": "Paylov",
+    "offline": "💵 Naqd (yetkazishda to'lanadi)",
+    "cash": "💵 Naqd",
+    "card": "💳 Karta",
+    "online": "🌐 Onlayn",
+}
+
+
+def yandex_maps_link(lat: float, lng: float) -> str:
+    """Yandex xaritada nuqtani ochish uchun havola (pt = lon,lat)."""
+    return f"https://yandex.uz/maps/?pt={lng},{lat}&z=17&l=map"
+
 
 def fmt_money(amount: int | float | None, currency: str = "so'm") -> str:
     """12000 -> '12 000 so'm'."""
@@ -28,12 +45,11 @@ def order_summary_text(order, currency: str = "so'm", for_admin: bool = False) -
     if order.address:
         lines.append(f"📍 {order.address}")
     if order.lat is not None and order.lng is not None:
-        lines.append(f"🗺 <a href=\"https://maps.google.com/?q={order.lat},{order.lng}\">Xaritada ochish</a>")
+        lines.append(f"🗺 <a href=\"{yandex_maps_link(order.lat, order.lng)}\">Xaritada ochish (Yandex)</a>")
     if getattr(order, "delivery_time", None):
         lines.append(f"🕒 Yetkazish vaqti: {order.delivery_time}")
-    pm = {"cash": "💵 Naqd", "card": "💳 Karta", "online": "🌐 Onlayn"}.get(order.payment_method, order.payment_method)
-    paid = "✅ To'langan" if getattr(order, "is_paid", False) else "⏳ To'lanmagan"
-    lines.append(f"To'lov: {pm} · {paid}")
+    pm = PAYMENT_LABELS.get(order.payment_method, order.payment_method)
+    lines.append(f"💳 To'lov: {pm}")
     if order.note:
         lines.append(f"📝 {order.note}")
     if for_admin:
