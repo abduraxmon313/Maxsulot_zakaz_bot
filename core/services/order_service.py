@@ -161,10 +161,11 @@ async def create_order(
     )
     order.items = order_items
     session.add(order)
-    session.add(OrderStatusHistory(order=order, from_status=None, to_status="created", actor_id=telegram_id))
+    await session.flush()  # order.id ni olamiz (status tarixi uchun kerak)
+    session.add(OrderStatusHistory(order_id=order.id, from_status=None, to_status="created", actor_id=telegram_id))
     await session.commit()
     # Buyurtmani `items` bilan QAYTA yuklaymiz — aks holda serialize/notify
-    # paytida async lazy-load xatosi (500) yuz berishi mumkin.
+    # paytida async lazy-load xatosi yuz berishi mumkin.
     result = await session.execute(
         select(Order).where(Order.id == order.id).options(selectinload(Order.items))
     )

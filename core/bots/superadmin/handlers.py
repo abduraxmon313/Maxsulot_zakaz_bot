@@ -369,7 +369,18 @@ async def toggle_open(message: Message):
     is_open = await settings_service.get_bool("is_open", True)
     new = not is_open
     await settings_service.set("is_open", "1" if new else "0")
-    state_txt = "🟢 OCHIQ — buyurtmalar qabul qilinmoqda" if new else "🔴 YOPIQ — buyurtmalar to'xtatildi"
+    hours = await settings_service.get("working_hours", "")
+    if new:
+        effective = await settings_service.is_shop_open()
+        if effective:
+            state_txt = "🟢 OCHIQ — buyurtmalar qabul qilinmoqda"
+        else:
+            state_txt = (
+                f"🟡 Qo'lda YOQILDI, lekin hozir ish vaqti emas ({hours}).\n"
+                "Do'kon ish vaqti kelganda avtomatik ochiladi."
+            )
+    else:
+        state_txt = "🔴 YOPIQ — buyurtmalar to'xtatildi (qo'lda)"
     await message.answer(f"Do'kon holati: <b>{state_txt}</b>", reply_markup=kb.main_menu())
 
 
@@ -409,12 +420,16 @@ async def system_status(message: Message):
     from core.bots import registry
 
     webapp = WEBAPP_URL or "❗️ o'rnatilmagan (WEBAPP_URL)"
-    is_open = await settings_service.get_bool("is_open", True)
+    manual_open = await settings_service.get_bool("is_open", True)
+    hours = await settings_service.get("working_hours", "")
+    effective = await settings_service.is_shop_open()
     await message.answer(
         "ℹ️ <b>Tizim holati</b>\n\n"
         f"🛒 Sotuv bot: {'🟢' if registry.customer_bot else '🔴'}\n"
         f"👨‍💼 Admin bot: {'🟢' if registry.admin_bot else '🔴'}\n"
         f"👑 Super Admin bot: {'🟢' if registry.superadmin_bot else '🔴'}\n"
-        f"🌐 Mini App: <code>{webapp}</code>\n"
-        f"🏪 Do'kon: {'🟢 ochiq' if is_open else '🔴 yopiq'}"
+        f"🌐 Mini App: <code>{webapp}</code>\n\n"
+        f"🏪 Do'kon holati: <b>{'🟢 OCHIQ' if effective else '🔴 YOPIQ'}</b>\n"
+        f"   • Qo'lda tugma: {'yoqilgan' if manual_open else 'o‘chirilgan (yopiq)'}\n"
+        f"   • Ish vaqti: <code>{hours or '—'}</code> (O‘zbekiston vaqti)"
     )
