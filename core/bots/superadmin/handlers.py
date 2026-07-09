@@ -366,21 +366,22 @@ async def edit_stock_value(message: Message, state: FSMContext, session: AsyncSe
 # ═════════════════════════════════════════════════════════════
 @router.message(F.text == kb.BTN_TOGGLE_OPEN)
 async def toggle_open(message: Message):
-    is_open = await settings_service.get_bool("is_open", True)
-    new = not is_open
-    await settings_service.set("is_open", "1" if new else "0")
+    # Do'kon ASOSAN ish vaqti bo'yicha ishlaydi. Bu tugma faqat VAQTINCHA majburiy
+    # yopish/ochish uchun (force_closed). Ish vaqti — sozlamalardagi «Ish vaqti».
+    closed = await settings_service.get_bool("force_closed", False)
+    new_closed = not closed
+    await settings_service.set("force_closed", "1" if new_closed else "0")
     hours = await settings_service.get("working_hours", "")
-    if new:
-        effective = await settings_service.is_shop_open()
-        if effective:
+    if new_closed:
+        state_txt = "🔴 VAQTINCHA YOPILDI — buyurtmalar qabul qilinmaydi (qo'lda)"
+    else:
+        if await settings_service.is_shop_open():
             state_txt = "🟢 OCHIQ — buyurtmalar qabul qilinmoqda"
         else:
             state_txt = (
-                f"🟡 Qo'lda YOQILDI, lekin hozir ish vaqti emas ({hours}).\n"
+                f"🟡 Majburiy yopish olib tashlandi, lekin hozir ish vaqti emas ({hours}).\n"
                 "Do'kon ish vaqti kelganda avtomatik ochiladi."
             )
-    else:
-        state_txt = "🔴 YOPIQ — buyurtmalar to'xtatildi (qo'lda)"
     await message.answer(f"Do'kon holati: <b>{state_txt}</b>", reply_markup=kb.main_menu())
 
 
@@ -474,7 +475,7 @@ async def system_status(message: Message):
     from core.bots import registry
 
     webapp = WEBAPP_URL or "❗️ o'rnatilmagan (WEBAPP_URL)"
-    manual_open = await settings_service.get_bool("is_open", True)
+    force_closed = await settings_service.get_bool("force_closed", False)
     hours = await settings_service.get("working_hours", "")
     effective = await settings_service.is_shop_open()
     await message.answer(
@@ -484,6 +485,6 @@ async def system_status(message: Message):
         f"👑 Super Admin bot: {'🟢' if registry.superadmin_bot else '🔴'}\n"
         f"🌐 Mini App: <code>{webapp}</code>\n\n"
         f"🏪 Do'kon holati: <b>{'🟢 OCHIQ' if effective else '🔴 YOPIQ'}</b>\n"
-        f"   • Qo'lda tugma: {'yoqilgan' if manual_open else 'o‘chirilgan (yopiq)'}\n"
+        f"   • Majburiy yopish: {'🔴 YOQILGAN (vaqtincha yopiq)' if force_closed else '🟢 yo‘q'}\n"
         f"   • Ish vaqti: <code>{hours or '—'}</code> (O‘zbekiston vaqti)"
     )

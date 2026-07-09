@@ -147,11 +147,14 @@ def _within_working_hours(hours_str: str) -> bool:
 async def is_shop_open() -> bool:
     """
     Do'kon hozir buyurtma qabul qiladimi?
-      • Super Admin qo'lda yopib qo'ygan bo'lsa (is_open=0) → yopiq.
-      • Aks holda ish vaqti (O'zbekiston vaqti) bo'yicha aniqlanadi.
+      • ASOSIY belgi — ISH VAQTI (O'zbekiston vaqti). Masalan "00:00 - 24:00" → doim ochiq.
+      • Super Admin `force_closed` bilan VAQTINCHA yopib qo'yishi mumkin (majburiy yopish).
+
+    Eslatma: eski `is_open` kaliti endi ishlatilmaydi (ba'zi hollarda "0" bo'lib
+    qotib qolib do'konni noto'g'ri yopiq ko'rsatardi). Endi ish vaqti hal qiladi.
     """
-    if not await get_bool("is_open", True):
-        logger.info("Do'kon YOPIQ: Super Admin qo'lda yopib qo'ygan (is_open=0)")
+    if await get_bool("force_closed", False):
+        logger.info("Do'kon YOPIQ: Super Admin qo'lda vaqtincha yopgan (force_closed=1)")
         return False
     hours = await get("working_hours", "")
     ok = _within_working_hours(hours)
@@ -169,7 +172,7 @@ async def delivery_slots(lead_minutes: int = 60, step_minutes: int = 30, max_slo
     ga yaxlitlanadi. Tugashi: do'konning yopilish vaqti (working_hours end).
     Do'kon yopiq yoki vaqt tugagan bo'lsa — bo'sh ro'yxat.
     """
-    if not await get_bool("is_open", True):
+    if await get_bool("force_closed", False):
         return []
     hours = await get("working_hours", "")
     parsed = _parse_hours(hours)
