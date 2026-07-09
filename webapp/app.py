@@ -101,6 +101,12 @@ async def security_middleware(request: Request, call_next):
                 pass
 
     response = await call_next(request)
+    # Mini App fayllari (HTML/JS/CSS) keshlanmasin — Telegram doim eng so'nggi
+    # versiyani yuklab olsin (eski kesh sabab eski xatolar qaytmasligi uchun).
+    if path == "/" or path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-XSS-Protection"] = "1; mode=block"
