@@ -14,6 +14,7 @@ from datetime import datetime
 
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from core.models.order import Order, OrderItem, OrderStatusHistory
 from core.models.product import Product
@@ -162,8 +163,12 @@ async def create_order(
     session.add(order)
     session.add(OrderStatusHistory(order=order, from_status=None, to_status="created", actor_id=telegram_id))
     await session.commit()
-    await session.refresh(order)
-    return order
+    # Buyurtmani `items` bilan QAYTA yuklaymiz — aks holda serialize/notify
+    # paytida async lazy-load xatosi (500) yuz berishi mumkin.
+    result = await session.execute(
+        select(Order).where(Order.id == order.id).options(selectinload(Order.items))
+    )
+    return result.scalar_one()
 
 
 async def _release(session: AsyncSession, reserved: list[tuple[int, int]]):

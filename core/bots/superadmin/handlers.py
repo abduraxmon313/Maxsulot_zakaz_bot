@@ -94,6 +94,14 @@ async def choose_setting(callback: CallbackQuery, state: FSMContext):
         prompt = "🖼 Yangi rasmni yuboring (yoki «o'chirish» deb yozing):"
     elif typ == "int":
         prompt = "Yangi qiymatni raqamda kiriting (so'm):"
+    elif key == "working_hours":
+        prompt = (
+            "Ish vaqtini <b>24 soatlik</b> formatda kiriting.\n"
+            "Namuna: <code>09:00 - 22:00</code>\n\n"
+            "• Tungi ish uchun: <code>22:00 - 06:00</code>\n"
+            "• 24 soat ochiq uchun: <code>00:00 - 24:00</code>\n"
+            "Vaqt O'zbekiston vaqti (Toshkent) bo'yicha hisoblanadi."
+        )
     else:
         prompt = "Yangi qiymatni kiriting:"
 
