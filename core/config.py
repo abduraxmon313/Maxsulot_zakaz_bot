@@ -146,5 +146,6 @@ DEFAULT_SETTINGS = {
     "free_delivery_from": "0",     # shu summadan oshsa bepul yetkazish (0 = o'chiq)
     "working_hours": "09:00 - 22:00",
     "is_open": "1",                # 1 = ochiq, 0 = yopiq (buyurtma qabul qilinmaydi)
-    "primary_color": "#8B5E3C",    # Mini App asosiy rangi (issiq jigarrang)
+    "shop_image": "",              # Do'kon logotipi/rasmi (Media id) — Mini App headerida ko'rinadi
+    "primary_color": "#7A573F",    # Mini App asosiy rangi (issiq jigarrang — brend)
 }

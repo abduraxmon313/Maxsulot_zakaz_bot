@@ -24,38 +24,49 @@ from urllib.parse import parse_qsl
 from fastapi import HTTPException, Request
 
 from core.config import (
+    ADMIN_BOT_TOKEN,
     CUSTOMER_BOT_TOKEN,
     INITDATA_MAX_AGE,
     RATE_LIMIT_MAX,
     RATE_LIMIT_WINDOW,
     STRICT_AUTH,
+    SUPERADMIN_BOT_TOKEN,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def _secret_key() -> bytes:
-    return hmac.new(b"WebAppData", (CUSTOMER_BOT_TOKEN or "").encode(), hashlib.sha256).digest()
+def _hash_for(pairs_no_hash: dict, token: str) -> str:
+    """Berilgan maydonlar to'plami + token uchun HMAC-SHA256 hash hisoblaydi."""
+    dcs = "\n".join(f"{k}={pairs_no_hash[k]}" for k in sorted(pairs_no_hash.keys()))
+    secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    return hmac.new(secret, dcs.encode(), hashlib.sha256).hexdigest()
 
 
 def verify_init_data(init_data: str) -> dict | None:
-    """initData ni tekshiradi. Muvaffaqiyatda `user` dict qaytaradi, aks holda None.
+    """
+    Telegram WebApp `initData` ni tekshiradi. Muvaffaqiyatda `user` dict qaytaradi.
+
+    Mustahkamlik uchun:
+      • Do'konning UCHALA boti tokeni bilan sinaladi (mijoz Mini App'ni istalgan
+        botdan ochgan bo'lishi mumkin — masalan egasi Super Admin botdan sinaydi).
+      • Bot API 8.0+ `signature` maydoni bilan ham, usiz ham hisoblab ko'riladi
+        (Telegram versiyalari orasidagi farqqa bardoshli).
 
     Xato sabablari WARNING sifatida loglanadi (Railway loglarida ko'rinadi).
     """
-    if not CUSTOMER_BOT_TOKEN:
-        logger.warning("initData: BOT_CUSTOMER_TOKEN o'rnatilmagan")
-        return None
     if not init_data:
         logger.warning("initData: bo'sh (frontend header/parametr yubormadi)")
         return None
+
+    tokens = [t for t in (CUSTOMER_BOT_TOKEN, ADMIN_BOT_TOKEN, SUPERADMIN_BOT_TOKEN) if t]
+    if not tokens:
+        logger.warning("initData: hech qanday bot tokeni o'rnatilmagan")
+        return None
+
     try:
         pairs = dict(parse_qsl(init_data, keep_blank_values=True))
         received_hash = pairs.pop("hash", None)
-        # Telegram Bot API 7.4+ dan `signature` maydoni qo'shildi (Ed25519 tashqi
-        # tekshiruv uchun). U HMAC `data_check_string` ga KIRMAYDI — aks holda
-        # hash mos kelmaydi va "Tasdiqlanmagan so'rov" xatosi chiqadi.
-        pairs.pop("signature", None)
         if not received_hash:
             logger.warning("initData: hash maydoni yo'q")
             return None
@@ -66,17 +77,23 @@ def verify_init_data(init_data: str) -> dict | None:
                 logger.warning("initData: eskirgan (auth_date juda eski)")
                 return None
 
-        data_check_string = "\n".join(f"{k}={pairs[k]}" for k in sorted(pairs.keys()))
-        computed = hmac.new(_secret_key(), data_check_string.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(computed, received_hash):
-            logger.warning("initData: hash mos kelmadi (token noto'g'ri bo'lishi mumkin)")
-            return None
+        # Variant A: barcha maydonlar (signature ham) — aiogram/Telegram standarti.
+        # Variant B: signature'siz — ba'zi mijoz versiyalari uchun zaxira.
+        variants = [pairs]
+        if "signature" in pairs:
+            variants.append({k: v for k, v in pairs.items() if k != "signature"})
 
-        user_raw = pairs.get("user")
-        if not user_raw:
-            logger.warning("initData: user maydoni yo'q")
-            return None
-        return json.loads(user_raw)
+        for token in tokens:
+            for variant in variants:
+                if hmac.compare_digest(_hash_for(variant, token), received_hash):
+                    user_raw = pairs.get("user")
+                    if not user_raw:
+                        logger.warning("initData: user maydoni yo'q")
+                        return None
+                    return json.loads(user_raw)
+
+        logger.warning("initData: hash hech qaysi bot tokeni bilan mos kelmadi")
+        return None
     except Exception as e:
         logger.warning("initData: tekshirishda xato: %s", e)
         return None

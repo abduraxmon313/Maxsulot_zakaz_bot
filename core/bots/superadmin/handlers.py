@@ -73,7 +73,7 @@ async def show_settings(message: Message):
     lines = ["⚙️ <b>Do'kon sozlamalari</b>\n", "O'zgartirish uchun tugmani bosing:\n"]
     for key, label, _typ in kb.EDITABLE_SETTINGS:
         val = await settings_service.get(key, "")
-        if key == "welcome_image":
+        if _typ == "image":
             val = "✅ o'rnatilgan" if val else "—"
         elif len(val) > 40:
             val = val[:40] + "…"
@@ -97,7 +97,7 @@ async def choose_setting(callback: CallbackQuery, state: FSMContext):
     else:
         prompt = "Yangi qiymatni kiriting:"
 
-    shown = ("✅ o'rnatilgan" if (key == "welcome_image" and current) else (current or "—"))
+    shown = ("✅ o'rnatilgan" if (typ == "image" and current) else (current or "—"))
     await callback.message.answer(
         f"<b>{label}</b>\nJoriy qiymat: <code>{shown}</code>\n\n{prompt}",
         reply_markup=kb.cancel_menu(),

@@ -130,3 +130,56 @@ async def is_shop_open() -> bool:
         return False
     hours = await get("working_hours", "")
     return _within_working_hours(hours)
+
+
+def _parse_hours(hours_str: str) -> tuple[int, int] | None:
+    """working_hours dan (start_min, end_min) ni qaytaradi. Aniqlanmasa None."""
+    matches = _TIME_RE.findall(hours_str or "")
+    if len(matches) < 2:
+        return None
+    try:
+        sh, sm = int(matches[0][0]), int(matches[0][1])
+        eh, em = int(matches[1][0]), int(matches[1][1])
+    except (ValueError, IndexError):
+        return None
+    if not (0 <= sh <= 23 and 0 <= eh <= 23 and 0 <= sm <= 59 and 0 <= em <= 59):
+        return None
+    return sh * 60 + sm, eh * 60 + em
+
+
+async def delivery_slots(lead_minutes: int = 60, step_minutes: int = 30, max_slots: int = 24) -> list[str]:
+    """
+    Yetkazib berish uchun bo'sh vaqt oraliqlarini qaytaradi (O'zbekiston vaqti).
+
+    Boshlanishi: HOZIR + `lead_minutes` (kamida 1 soat keyin), keyingi `step_minutes`
+    ga yaxlitlanadi. Tugashi: do'konning yopilish vaqti (working_hours end).
+    Do'kon yopiq yoki vaqt tugagan bo'lsa — bo'sh ro'yxat.
+    """
+    if not await get_bool("is_open", True):
+        return []
+    hours = await get("working_hours", "")
+    parsed = _parse_hours(hours)
+
+    now = datetime.now(TIMEZONE)
+    cur = now.hour * 60 + now.minute
+
+    # Yopilish vaqti (tungi oraliq bo'lsa +24soat sifatida qaraymiz).
+    if parsed:
+        start, end = parsed
+        if end <= start:
+            end += 24 * 60  # masalan 22:00 - 02:00
+    else:
+        end = 24 * 60  # ish vaqti noma'lum — kun oxirigacha
+
+    first = cur + lead_minutes
+    if first % step_minutes:
+        first += step_minutes - (first % step_minutes)  # keyingi qadamga yaxlitlash
+
+    slots: list[str] = []
+    t = first
+    while t <= end and len(slots) < max_slots:
+        hh = (t // 60) % 24
+        mm = t % 60
+        slots.append(f"{hh:02d}:{mm:02d}")
+        t += step_minutes
+    return slots

@@ -22,6 +22,7 @@ BTN_SKIP = "⏭ O'tkazib yuborish"
 # Tahrirlanadigan sozlamalar: kalit -> (yorliq, tur). tur: text | int | image
 EDITABLE_SETTINGS: list[tuple[str, str, str]] = [
     ("shop_name", "🏪 Do'kon nomi", "text"),
+    ("shop_image", "🖼 Do'kon rasmi (logo)", "image"),
     ("welcome_uz", "👋 Salom xabari (UZ)", "text"),
     ("welcome_ru", "👋 Salom xabari (RU)", "text"),
     ("welcome_en", "👋 Salom xabari (EN)", "text"),
@@ -32,7 +33,6 @@ EDITABLE_SETTINGS: list[tuple[str, str, str]] = [
     ("min_order_amount", "🧾 Minimal buyurtma (so'm)", "int"),
     ("delivery_fee", "🚚 Yetkazib berish narxi (so'm)", "int"),
     ("free_delivery_from", "🆓 Bepul yetkazish chegarasi (so'm)", "int"),
-    ("primary_color", "🎨 Asosiy rang (#HEX)", "text"),
 ]
 
 SETTING_LABELS = {key: label for key, label, _ in EDITABLE_SETTINGS}
