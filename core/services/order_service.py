@@ -62,6 +62,7 @@ async def create_order(
     phone: str | None = None,
     payment_method: str = "cash",
     is_paid: bool = False,
+    delivery_time: str | None = None,
     note: str | None = None,
 ) -> Order:
     if not items:
@@ -146,6 +147,7 @@ async def create_order(
         address=address,
         lat=lat,
         lng=lng,
+        delivery_time=(delivery_time or None),
         items_total=items_total,
         delivery_fee=delivery_fee,
         discount_total=0,

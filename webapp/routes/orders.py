@@ -38,6 +38,7 @@ class OrderIn(BaseModel):
     address: str | None = Field(default=None, max_length=600)
     lat: float | None = None
     lng: float | None = None
+    delivery_time: str | None = Field(default=None, max_length=32)
     note: str | None = Field(default=None, max_length=600)
 
 
@@ -68,6 +69,7 @@ async def create_order(payload: OrderIn, request: Request, session: AsyncSession
             phone=phone,
             payment_method="online",   # to'lov bot ichida amalga oshiriladi
             is_paid=False,
+            delivery_time=(payload.delivery_time or "").strip() or None,
             note=(payload.note or "").strip() or None,
         )
     except OrderError as e:

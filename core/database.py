@@ -73,6 +73,7 @@ ORDER_NEW_COLUMNS = [
     ("cancel_reason", "VARCHAR(255)"),
     ("is_paid", "BOOLEAN DEFAULT FALSE"),
     ("paid_at", "TIMESTAMP"),
+    ("delivery_time", "VARCHAR(32)"),
     ("confirmed_at", "TIMESTAMP"),
     ("delivered_at", "TIMESTAMP"),
     ("canceled_at", "TIMESTAMP"),

@@ -25,6 +25,8 @@ class Order(Base):
     address: Mapped[str | None] = mapped_column(String(512), nullable=True)
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Yetkazib berish vaqti (mijoz tanlagan, masalan "19:30" yoki "Imkon qadar tez").
+    delivery_time: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     items_total: Mapped[int] = mapped_column(Integer, default=0)
     delivery_fee: Mapped[int] = mapped_column(Integer, default=0)

@@ -58,6 +58,7 @@ def serialize_order(order, currency: str = "so'm") -> dict:
         "grand_total": order.grand_total,
         "payment_method": order.payment_method,
         "is_paid": bool(getattr(order, "is_paid", False)),
+        "delivery_time": getattr(order, "delivery_time", None),
         "note": order.note,
         "created_at": order.created_at.isoformat() if order.created_at else None,
         "items": [

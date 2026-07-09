@@ -15,7 +15,7 @@ const State = {
   currentCategory: null, search: '',
   lang: localStorage.getItem('lang') || ((tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) || 'uz'),
   view: 'home',
-  _map: null, _pickLat: null, _pickLng: null, _pickAddr: '', _geoT: null,
+  _map: null, _pickLat: null, _pickLng: null, _pickAddr: '', _geoT: null, _time: '',
 };
 if (!['uz', 'ru', 'en'].includes(State.lang)) State.lang = 'uz';
 
@@ -103,6 +103,10 @@ const I18N = {
   go_to_bot: { uz: 'Botga o\'ting va «To\'lov qilish» tugmasini bosing', ru: 'Перейдите в бот и нажмите «Оплатить»', en: 'Go to the bot and tap “Pay”' },
   open_bot: { uz: 'Botga o\'tish', ru: 'Перейти в бот', en: 'Go to the bot' },
   locating: { uz: 'Joylashuv aniqlanmoqda…', ru: 'Определяем локацию…', en: 'Locating…' },
+  delivery_time: { uz: 'Yetkazib berish vaqti', ru: 'Время доставки', en: 'Delivery time' },
+  asap: { uz: 'Imkon qadar tez', ru: 'Как можно скорее', en: 'As soon as possible' },
+  gate_title: { uz: 'Do\'kon faqat Telegram orqali ochiladi', ru: 'Магазин открывается только через Telegram', en: 'The shop opens only via Telegram' },
+  gate_text: { uz: 'Iltimos, do\'kon botini oching va «Do\'konni ochish» tugmasi orqali kiring.', ru: 'Пожалуйста, откройте бота магазина и войдите через кнопку «Открыть магазин».', en: 'Please open the shop bot and enter via the “Open shop” button.' },
 };
 const ST = {
   created: { uz: 'Yangi', ru: 'Новый', en: 'New' }, confirmed: { uz: 'Tasdiqlandi', ru: 'Подтверждён', en: 'Confirmed' },
@@ -275,6 +279,7 @@ function openCheckout() {
       <div class="field"><label>${L('address_label')}</label><input id="afAddress" placeholder="${L('address_ph')}" /></div>
       <div class="field"><input id="afLandmark" placeholder="${L('landmark')}" /></div>
     </div>
+    <div class="field"><label>${L('delivery_time')}</label><div class="time-slots" id="timeSlots"></div></div>
     <div class="field"><label>${L('note')}</label><textarea id="ckNote" placeholder="${L('note')}"></textarea></div>
     <div id="ckSummary"></div>
     <button class="btn" id="submitOrder"><span data-ic="bag"></span>${L('save_and_pay')}</button>`;
@@ -283,6 +288,7 @@ function openCheckout() {
   const syncAddr = () => { addrBlock.style.display = deliveryType === 'delivery' ? '' : 'none'; };
   segD.querySelectorAll('button').forEach(b => b.onclick = () => { segD.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); deliveryType = b.dataset.v; syncAddr(); renderSummary(deliveryType); });
   applyIcons(el('checkoutContent'));
+  renderTimeSlots();
   syncAddr();
   renderSummary(deliveryType);
   el('submitOrder').onclick = () => submitOrder(deliveryType);
@@ -293,6 +299,18 @@ function openCheckout() {
       .then(() => { requestAnimationFrame(() => setTimeout(() => { initAddressMap(el('mapEl')); const ld = el('mapLoading'); if (ld) ld.style.display = 'none'; }, 100)); })
       .catch(() => { const w = el('mapEl'); const wrap = w && w.closest('.map-wrap'); if (wrap) wrap.style.display = 'none'; const hint = document.querySelector('.map-hint'); if (hint) hint.style.display = 'none'; });
   }
+}
+function renderTimeSlots() {
+  const wrap = el('timeSlots'); if (!wrap) return;
+  const slots = (State.config && State.config.delivery_slots) || [];
+  State._time = '';
+  let html = `<button type="button" class="slot active" data-t="">${L('asap')}</button>`;
+  html += slots.map(s => `<button type="button" class="slot" data-t="${esc(s)}">${esc(s)}</button>`).join('');
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.slot').forEach(b => b.onclick = () => {
+    wrap.querySelectorAll('.slot').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); State._time = b.dataset.t; haptic('light');
+  });
 }
 function deliveryFeeFor(t) { const c = State.config; if (!c) return 0; let f = c.delivery_fee || 0; if (c.free_delivery_from && t >= c.free_delivery_from) f = 0; return f; }
 function renderSummary(deliveryType) {
@@ -312,9 +330,10 @@ function submitOrder(deliveryType) {
     lat = State._pickLat; lng = State._pickLng;
   }
   const note = (el('ckNote') && el('ckNote').value.trim()) || '';
+  const deliveryTime = State._time || L('asap');
   const btn = el('submitOrder');
   if (btn) { btn.disabled = true; btn.textContent = L('saving'); }
-  const body = { items: State.cart.map(x => ({ product_id: x.id, qty: x.qty })), delivery_type: deliveryType, address, lat, lng, note };
+  const body = { items: State.cart.map(x => ({ product_id: x.id, qty: x.qty })), delivery_type: deliveryType, address, lat, lng, delivery_time: deliveryTime, note };
   api('/orders', { method: 'POST', body: JSON.stringify(body) })
     .then((order) => { State.cart = []; saveCart(); renderProducts(); haptic('medium'); showOrderSuccess(order); })
     .catch((e) => { toast('❌ ' + e.message); if (btn) { btn.disabled = false; btn.innerHTML = `<span data-ic="bag"></span>${L('save_and_pay')}`; applyIcons(btn); } });
@@ -415,20 +434,43 @@ function setLang(lang) {
 }
 
 function applyTheme() {
-  const color = (State.config && State.config.primary_color) || '#8B5E3C';
+  const color = (State.config && State.config.primary_color) || '#7A573F';
   if (/^#([0-9a-f]{3}){1,2}$/i.test(color)) document.documentElement.style.setProperty('--primary', color);
-  if (tg) { try { tg.setHeaderColor && tg.setHeaderColor('#FAF7F2'); tg.setBackgroundColor && tg.setBackgroundColor('#FAF7F2'); } catch (e) {} }
+  if (tg) { try { tg.setHeaderColor && tg.setHeaderColor('#F8F5EF'); tg.setBackgroundColor && tg.setBackgroundColor('#F8F5EF'); } catch (e) {} }
+}
+
+/* Faqat Telegram orqali ochilishi kerak — aks holda "gate" ekran ko'rsatiladi. */
+function showTelegramGate() {
+  const sp = el('splash'); if (sp) sp.style.display = 'none';
+  const gate = document.createElement('div');
+  gate.className = 'tg-gate';
+  gate.innerHTML = `<div class="gate-logo">${ICONS.bag}</div><h2>${L('gate_title')}</h2><p>${L('gate_text')}</p>`;
+  document.body.appendChild(gate);
+}
+
+function isInTelegram() {
+  return !!(tg && typeof tg.initData === 'string' && tg.initData.length > 0);
+}
+
+function setShopLogo() {
+  const logo = el('shopLogo');
+  if (logo && State.config && State.config.shop_image) {
+    logo.style.backgroundImage = `url(${State.config.shop_image})`;
+  }
 }
 
 async function init() {
+  // Faqat Telegram ichida ishlaydi.
+  if (!isInTelegram()) { showTelegramGate(); return; }
   applyIcons(document);
   try { State.config = await api('/config'); }
-  catch (e) { State.config = { shop_name: "Do'kon", currency: "so'm", primary_color: '#8B5E3C', min_order_amount: 0, delivery_fee: 0, free_delivery_from: 0, is_open: true }; }
+  catch (e) { State.config = { shop_name: "Do'kon", currency: "so'm", primary_color: '#7A573F', min_order_amount: 0, delivery_fee: 0, free_delivery_from: 0, is_open: true, delivery_slots: [] }; }
   el('searchInput').placeholder = L('search');
   el('productsTitle').textContent = L('products');
   el('shopName').textContent = State.config.shop_name || "Do'kon";
   el('shopStatus').textContent = L('online_shop');
   applyTheme();
+  setShopLogo();
   if (State.config.is_open === false) { const cb = el('closedBanner'); cb.hidden = false; cb.querySelector('span:last-child').textContent = L('closed'); applyIcons(cb); }
   skeletonGrid();
   try { State.categories = await api('/categories'); } catch (e) { State.categories = []; }
