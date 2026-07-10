@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.services import media_service, order_service, settings_service, user_service
 from core.services.i18n import STATUS_LABELS, t
 from core.utils import fmt_money
-from core.bots.customer.keyboards import contact_request, language_inline, main_menu
+from core.bots.customer.keyboards import contact_request, language_inline, main_menu, open_shop_inline
 from core.bots.customer.states import Onboarding
 
 router = Router()
@@ -158,7 +158,14 @@ async def handle_menu(message: Message, session: AsyncSession):
         return
 
     if _is_btn(text, "btn_open_shop"):
-        await _send_welcome(message, session, lang)
+        # INLINE web_app tugmasi initData'ni to'liq beradi (menyu ☰ tugmasi kabi) —
+        # reply-klaviatura web_app tugmasidan farqli. Shu sabab bu yerdan ochamiz.
+        ikb = open_shop_inline(lang)
+        if ikb is not None:
+            await message.answer(t("tap_to_open", lang), reply_markup=ikb)
+        else:
+            # WEBAPP_URL https bo'lmasa (lokal test) — oddiy salom.
+            await _send_welcome(message, session, lang)
         return
 
     await message.answer("👇", reply_markup=main_menu(lang))
