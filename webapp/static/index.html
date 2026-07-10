@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=20" />
+  <link rel="stylesheet" href="/static/styles.css?v=21" />
 </head>
 <body>
   <div id="splash" class="splash"><div class="spinner"></div></div>
@@ -25,7 +25,7 @@
             <b class="tb-name" id="shopName">Do'kon</b>
           </div>
         </div>
-        <button class="tb-icon" id="tbCart" aria-label="Savat">
+        <button class="tb-icon" id="tbCart" aria-label="Savat" data-i18n-aria="cart_title">
           <span data-ic="cart"></span>
           <b id="cartBadge" class="badge" hidden>0</b>
         </button>
@@ -34,7 +34,7 @@
       <div class="home-scroll">
         <div class="searchbar">
           <span data-ic="search" class="sb-ic"></span>
-          <input type="text" id="searchInput" placeholder="Mahsulot qidirish…" autocomplete="off" aria-label="Qidirish" />
+          <input type="text" id="searchInput" placeholder="Mahsulot qidirish…" data-i18n-ph="search" autocomplete="off" aria-label="Qidirish" />
           <button class="sb-clear" id="searchClear" hidden aria-label="Tozalash"><span data-ic="x"></span></button>
         </div>
 
@@ -55,36 +55,36 @@
         <div id="products" class="grid"></div>
         <div id="emptyProducts" class="empty" hidden>
           <div class="empty-ic"><span data-ic="package"></span></div>
-          <p>Mahsulot topilmadi</p>
+          <p data-i18n="no_products">Mahsulot topilmadi</p>
         </div>
       </div>
     </section>
 
     <!-- ═══ CART ═══ -->
     <section id="view-cart" class="view">
-      <header class="page-head"><h1>Savat</h1></header>
+      <header class="page-head"><h1 data-i18n="cart_title">Savat</h1></header>
       <div id="cartItems" class="cart-items"></div>
       <div id="cartEmpty" class="empty" hidden>
         <div class="empty-ic"><span data-ic="cart"></span></div>
-        <p>Savat bo'sh</p>
-        <button class="btn btn-ghost" id="emptyGoShop">Xaridni boshlash</button>
+        <p data-i18n="cart_empty">Savat bo'sh</p>
+        <button class="btn btn-ghost" id="emptyGoShop" data-i18n="start_shopping">Xaridni boshlash</button>
       </div>
       <div id="cartFooter" class="cart-footer"></div>
     </section>
 
     <!-- ═══ ORDERS ═══ -->
     <section id="view-orders" class="view">
-      <header class="page-head"><h1>Buyurtmalarim</h1></header>
+      <header class="page-head"><h1 data-i18n="orders_title">Buyurtmalarim</h1></header>
       <div id="ordersList" class="orders-list"></div>
       <div id="emptyOrders" class="empty" hidden>
         <div class="empty-ic"><span data-ic="receipt"></span></div>
-        <p>Sizda hali buyurtmalar yo'q</p>
+        <p data-i18n="no_orders">Sizda hali buyurtmalar yo'q</p>
       </div>
     </section>
 
     <!-- ═══ PROFILE ═══ -->
     <section id="view-profile" class="view">
-      <header class="page-head"><h1>Profil</h1></header>
+      <header class="page-head"><h1 data-i18n="profile_title">Profil</h1></header>
       <div id="profileContent"></div>
     </section>
   </main>
@@ -100,20 +100,20 @@
     <div class="sheet-backdrop" data-close></div>
     <div class="sheet-card tall">
       <div class="sheet-handle"></div>
-      <h2 class="sheet-title">Buyurtmani rasmiylashtirish</h2>
+      <h2 class="sheet-title" data-i18n="checkout_title">Buyurtmani rasmiylashtirish</h2>
       <div id="checkoutContent"></div>
     </div>
   </div>
 
   <!-- Bottom nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" data-nav="home"><span data-ic="home"></span><small>Asosiy</small></button>
-    <button class="nav-item" data-nav="cart"><span data-ic="cart"></span><small>Savat</small><b id="navCartBadge" class="badge" hidden>0</b></button>
-    <button class="nav-item" data-nav="orders"><span data-ic="receipt"></span><small>Buyurtmalar</small></button>
-    <button class="nav-item" data-nav="profile"><span data-ic="user"></span><small>Profil</small></button>
+    <button class="nav-item active" data-nav="home"><span data-ic="home"></span><small data-i18n="nav_home">Asosiy</small></button>
+    <button class="nav-item" data-nav="cart"><span data-ic="cart"></span><small data-i18n="nav_cart">Savat</small><b id="navCartBadge" class="badge" hidden>0</b></button>
+    <button class="nav-item" data-nav="orders"><span data-ic="receipt"></span><small data-i18n="nav_orders">Buyurtmalar</small></button>
+    <button class="nav-item" data-nav="profile"><span data-ic="user"></span><small data-i18n="nav_profile">Profil</small></button>
   </nav>
 
   <div id="toast" class="toast"></div>
-  <script src="/static/app.js?v=20"></script>
+  <script src="/static/app.js?v=21"></script>
 </body>
 </html>

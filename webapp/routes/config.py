@@ -1,11 +1,21 @@
-"""GET /api/config — Mini App uchun do'kon sozlamalari (ochiq ma'lumot)."""
+"""GET /api/config — Mini App uchun do'kon sozlamalari (ochiq ma'lumot).
+POST /api/lang — Mini App'da til o'zgartirilsa, uni foydalanuvchi profiliga saqlaydi
+(bot ham keyingi safar shu tildan foydalanadi — bir yo'nalishli sinxron).
+"""
 from __future__ import annotations
 
-from fastapi import APIRouter
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import SUPPORTED_LANGUAGES, YANDEX_MAPS_API_KEY
-from core.services import settings_service
+from core.database import get_db
+from core.services import settings_service, user_service
+from webapp.security import get_init_data, resolve_telegram_id, verify_init_data
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -15,12 +25,33 @@ def _image_url(media_id: str) -> str:
     return f"/api/image/{media_id}" if media_id.isdigit() else ""
 
 
+async def _try_user_lang(request: Request, session: AsyncSession) -> str | None:
+    """
+    Agar so'rov Telegram initData bilan tasdiqlangan bo'lsa — foydalanuvchining
+    bot orqali tanlagan tilini qaytaradi. Aks holda None. `/api/config` ochiq
+    endpoint bo'lgani uchun tekshirish YUMSHOQ (auth kerak emas — faqat mavjud
+    bo'lsa ishlatamiz), 401 tashlamaydi.
+    """
+    init_data = get_init_data(request)
+    if not init_data:
+        return None
+    user = verify_init_data(init_data)
+    if not user or not user.get("id"):
+        return None
+    try:
+        return await user_service.get_language(session, int(user["id"]))
+    except Exception as e:  # DB xatosi til uchun butun /config ni buzmasin
+        logger.warning("user_lang olishda xato: %s", e)
+        return None
+
+
 @router.get("/config")
-async def get_config():
+async def get_config(request: Request, session: AsyncSession = Depends(get_db)):
     # (do'kon holati/ish vaqti doim yangi bo'lsin — kesh no-cache middleware'da)
     s = await settings_service.get_all()
     is_open = await settings_service.is_shop_open()  # O'zbekiston vaqti bo'yicha
     slots = await settings_service.delivery_slots()  # yetkazib berish vaqtlari (UZ)
+    user_lang = await _try_user_lang(request, session)
     return {
         "shop_name": s.get("shop_name", "Do'kon"),
         "currency": s.get("currency", "so'm"),
@@ -34,9 +65,35 @@ async def get_config():
         "delivery_slots": slots,
         "maps_api_key": YANDEX_MAPS_API_KEY,
         "languages": SUPPORTED_LANGUAGES,
+        # Bot'da tanlangan til — Mini App shu bilan boshlaydi (sinxron uchun).
+        "user_lang": user_lang,
         "welcome": {
             "uz": s.get("welcome_uz", ""),
             "ru": s.get("welcome_ru", ""),
             "en": s.get("welcome_en", ""),
         },
     }
+
+
+class LangIn(BaseModel):
+    lang: str
+
+
+@router.post("/lang")
+async def set_lang(
+    body: LangIn,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+):
+    """Foydalanuvchi Mini App'da til o'zgartirsa, uni bot profilida ham yangilaydi.
+    Shunda foydalanuvchi keyingi safar botga yozganida (masalan `/start`) bot ham
+    yangi tilda javob beradi. Bir yo'nalishli emas — teskarisi ham ishlaydi:
+    bot orqali til o'zgartirilsa, Mini App keyingi ochilishida config.user_lang
+    orqali shu tilni oladi.
+    """
+    lang = (body.lang or "").strip().lower()
+    if lang not in set(SUPPORTED_LANGUAGES):
+        raise HTTPException(status_code=400, detail="Qo'llab-quvvatlanmaydigan til.")
+    telegram_id = resolve_telegram_id(request)  # 401 agar tasdiqlanmagan
+    await user_service.set_language(session, telegram_id, lang)
+    return {"ok": True, "lang": lang}

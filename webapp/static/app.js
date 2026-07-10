@@ -112,6 +112,15 @@ const I18N = {
   map_error: { uz: 'Xarita yuklashda xatolik. Yetkazib berish uchun manzil tanlab bo\'lmaydi — faqat «Olib ketish» mavjud.', ru: 'Ошибка загрузки карты. Адрес доставки выбрать нельзя — доступен только «Самовывоз».', en: 'Map failed to load. Delivery address can\'t be selected — only “Pickup” is available.' },
   map_note: { uz: 'Xarita yuklanmadi — manzilingizni quyida matn ko\'rinishida yozing yoki «Olib ketish»ni tanlang.', ru: 'Карта не загрузилась — введите адрес текстом ниже или выберите «Самовывоз».', en: 'Map didn\'t load — type your address below or choose “Pickup”.' },
   loc_fail: { uz: 'Joylashuvni aniqlab bo\'lmadi', ru: 'Не удалось определить локацию', en: 'Could not detect location' },
+  /* Statik sahifa/sarlavha va nav yozuvlari (data-i18n orqali qo'llanadi) */
+  cart_title: { uz: 'Savat', ru: 'Корзина', en: 'Cart' },
+  orders_title: { uz: 'Buyurtmalarim', ru: 'Мои заказы', en: 'My orders' },
+  profile_title: { uz: 'Profil', ru: 'Профиль', en: 'Profile' },
+  checkout_title: { uz: 'Buyurtmani rasmiylashtirish', ru: 'Оформление заказа', en: 'Checkout' },
+  nav_home: { uz: 'Asosiy', ru: 'Главная', en: 'Home' },
+  nav_cart: { uz: 'Savat', ru: 'Корзина', en: 'Cart' },
+  nav_orders: { uz: 'Buyurtmalar', ru: 'Заказы', en: 'Orders' },
+  nav_profile: { uz: 'Profil', ru: 'Профиль', en: 'Profile' },
 };
 const ST = {
   created: { uz: 'Yangi', ru: 'Новый', en: 'New' }, confirmed: { uz: 'Tasdiqlandi', ru: 'Подтверждён', en: 'Confirmed' },
@@ -497,12 +506,53 @@ async function loadProducts() {
   } catch (e) { el('products').innerHTML = ''; toast(e.message); }
 }
 
-function setLang(lang) {
-  State.lang = lang; localStorage.setItem('lang', lang);
-  el('searchInput').placeholder = L('search');
-  el('productsTitle').textContent = L('products');
-  el('shopStatus').textContent = L('online_shop');
-  renderCategories(); renderProducts();
+/* Statik HTML'dagi data-i18n / data-i18n-ph / data-i18n-aria markerlariga
+   ega barcha elementlarga joriy tildagi matnni qo'yadi. Bu tufayli sahifa
+   nomlari (Savat / Buyurtmalarim / Profil), bottom-nav yozuvlari va boshqa
+   statik matnlar til bilan birga o'zgaradi. */
+function applyI18n(root) {
+  const scope = root || document;
+  scope.querySelectorAll('[data-i18n]').forEach((node) => {
+    const key = node.getAttribute('data-i18n');
+    if (I18N[key]) node.textContent = L(key);
+  });
+  scope.querySelectorAll('[data-i18n-ph]').forEach((node) => {
+    const key = node.getAttribute('data-i18n-ph');
+    if (I18N[key]) node.setAttribute('placeholder', L(key));
+  });
+  scope.querySelectorAll('[data-i18n-aria]').forEach((node) => {
+    const key = node.getAttribute('data-i18n-aria');
+    if (I18N[key]) node.setAttribute('aria-label', L(key));
+  });
+}
+
+/* Serverga (bot profiliga) tanlangan tilni yuboradi — sinxron uchun.
+   Muvaffaqiyatsizlik jim: mahalliy tildan foydalanish davom etadi. */
+function persistLangToBot(lang) {
+  try {
+    api('/lang', { method: 'POST', body: JSON.stringify({ lang }) })
+      .catch((e) => { console.warn('lang sync failed:', e && e.message); });
+  } catch (e) { /* ignore */ }
+}
+
+function setLang(lang, opts) {
+  if (!['uz', 'ru', 'en'].includes(lang)) return;
+  const changed = State.lang !== lang;
+  State.lang = lang;
+  localStorage.setItem('lang', lang);
+  // HTML dagi barcha statik matnlar (sahifa nomlari, nav yozuvlari, ...)
+  applyI18n();
+  // Dinamik render qilinadigan qismlar
+  const si = el('searchInput'); if (si) si.placeholder = L('search');
+  const pt = el('productsTitle'); if (pt) pt.textContent = L('products');
+  const ss = el('shopStatus'); if (ss) ss.textContent = L('online_shop');
+  applyShopStatus(); // "Do'kon yopiq" banner matni ham tilga moslashsin
+  if (State.categories && State.categories.length !== undefined) renderCategories();
+  if (State.products && State.products.length !== undefined) renderProducts();
+  // Botga saqlash (foydalanuvchi profilida) — faqat foydalanuvchi o'zi
+  // o'zgartirganda (silent=true bo'lmasa). Bot -> WebApp yo'nalishida takror
+  // yozib qo'yishning keragi yo'q.
+  if (changed && !(opts && opts.silent)) persistLangToBot(lang);
 }
 
 function applyTheme() {
@@ -568,6 +618,10 @@ async function refreshShopStatus() {
       if (cfg && typeof cfg === 'object') {
         State.config = Object.assign({}, State.config, cfg);
         applyShopStatus();
+        // Botda til o'zgartirilib WebApp'ga qaytilsa — bu yerda darhol qo'llaymiz.
+        if (cfg.user_lang && ['uz', 'ru', 'en'].includes(cfg.user_lang) && cfg.user_lang !== State.lang) {
+          setLang(cfg.user_lang, { silent: true });
+        }
       }
     } catch (e) { /* jim: tarmoq xatosi banner holatini o'zgartirmaydi */ }
   }, 150);
@@ -592,6 +646,13 @@ async function init() {
   applyIcons(document);
   try { State.config = await api('/config'); }
   catch (e) { State.config = { shop_name: "Do'kon", currency: "so'm", primary_color: '#7A573F', min_order_amount: 0, delivery_fee: 0, free_delivery_from: 0, is_open: true, delivery_slots: [] }; }
+  // Bot orqali tanlangan til (foydalanuvchi profilidan) ustunlik qiladi —
+  // shu tufayli botda til o'zgartirilsa, WebApp keyingi ochilishida shu tilda ochiladi.
+  if (State.config && State.config.user_lang && ['uz', 'ru', 'en'].includes(State.config.user_lang)) {
+    setLang(State.config.user_lang, { silent: true });
+  } else {
+    applyI18n(); // faqat statik matnlarni joriy tilda qo'llaymiz
+  }
   el('searchInput').placeholder = L('search');
   el('productsTitle').textContent = L('products');
   el('shopName').textContent = State.config.shop_name || "Do'kon";
