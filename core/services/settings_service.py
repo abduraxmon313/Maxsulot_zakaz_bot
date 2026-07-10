@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from datetime import datetime
 
 from sqlalchemy import select
@@ -20,20 +21,28 @@ from core.models.setting import Setting
 logger = logging.getLogger(__name__)
 
 _cache: dict[str, str] = {}
-_loaded = False
+_loaded_at: float = 0.0
+# Kesh QISQA muddatga saqlanadi. Bir nechta jarayon (instansiya) ishlaganda ham
+# (masalan Super Admin bir jarayonda o'zgartirsa) webapp boshqa jarayonda ham
+# bir necha soniyada yangi qiymatni oladi — shu sabab "yopiq/ochiq" nomuvofiqligi
+# bo'lmaydi.
+_CACHE_TTL = 3.0
 
 
 async def _ensure_loaded():
-    global _loaded
-    if _loaded:
+    global _loaded_at
+    # Kesh yangi bo'lsa (TTL ichida) — DB'ga bormaymiz.
+    if _loaded_at and (time.time() - _loaded_at) < _CACHE_TTL:
         return
     async with AsyncSessionLocal() as session:
         rows = (await session.execute(select(Setting))).scalars().all()
-    _cache.update({r.key: r.value for r in rows})
+    fresh = {r.key: r.value for r in rows}
     # Default qiymatlar bilan to'ldiramiz (DB'da bo'lmaganlari uchun).
     for k, v in DEFAULT_SETTINGS.items():
-        _cache.setdefault(k, str(v))
-    _loaded = True
+        fresh.setdefault(k, str(v))
+    _cache.clear()
+    _cache.update(fresh)
+    _loaded_at = time.time()
 
 
 async def get_all() -> dict[str, str]:
@@ -75,9 +84,9 @@ async def set(key: str, value: str) -> None:
 
 
 def invalidate():
-    """Keshni majburan tozalash (test/admin uchun)."""
-    global _loaded
-    _loaded = False
+    """Keshni majburan tozalash (test/admin uchun) — keyingi o'qishda DB'dan yuklanadi."""
+    global _loaded_at
+    _loaded_at = 0.0
     _cache.clear()
 
 

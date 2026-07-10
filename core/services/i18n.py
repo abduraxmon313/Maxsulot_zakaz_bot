@@ -15,6 +15,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "btn_contact": {"uz": "☎️ Aloqa", "ru": "☎️ Контакты", "en": "☎️ Contact"},
     "btn_language": {"uz": "🌐 Til", "ru": "🌐 Язык", "en": "🌐 Language"},
     "btn_shop_address": {"uz": "📍 Do'kon manzili", "ru": "📍 Адрес магазина", "en": "📍 Shop address"},
+    "tap_to_open": {
+        "uz": "🛍 Do'kon katalogini ochish uchun quyidagi tugmani bosing 👇",
+        "ru": "🛍 Нажмите кнопку ниже, чтобы открыть каталог магазина 👇",
+        "en": "🛍 Tap the button below to open the shop catalog 👇",
+    },
     "shop_address_none": {
         "uz": "Do'kon manzili hozircha kiritilmagan.",
         "ru": "Адрес магазина пока не указан.",

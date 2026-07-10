@@ -140,7 +140,10 @@ async function api(path, options = {}) {
     // Zaxira: ba'zi muhitlar maxsus header'ni olib tashlashi mumkin — query orqali ham yuboramiz.
     url += (url.includes('?') ? '&' : '?') + 'tgWebAppData=' + encodeURIComponent(initData);
   }
-  const res = await fetch(url, Object.assign({}, options, { headers }));
+  // Kesh-buster: har so'rov noyob bo'lsin (Telegram/brauzer eski javobni bermasin —
+  // masalan do'kon holati eski "yopiq" bo'lib qolmasligi uchun).
+  url += (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+  const res = await fetch(url, Object.assign({}, options, { headers, cache: 'no-store' }));
   if (!res.ok) { let d = 'Xatolik yuz berdi'; try { d = (await res.json()).detail || d; } catch (e) {} throw new Error(d); }
   return res.json();
 }
@@ -321,6 +324,10 @@ function openCheckout() {
   const onMapOk = () => {
     State._mapOk = true;
     const ld = el('mapLoading'); if (ld) ld.style.display = 'none';
+    // Agar avvalroq ogohlantirish ko'rinib qolgan bo'lsa — uni yashirib, xaritani qaytaramiz.
+    const note = el('mapNote'); if (note) note.hidden = true;
+    const wrap = document.querySelector('.map-wrap'); if (wrap) wrap.style.display = '';
+    const hint = document.querySelector('.map-hint'); if (hint) hint.style.display = '';
   };
 
   applyIcons(el('checkoutContent'));
@@ -334,12 +341,18 @@ function openCheckout() {
   const locBtn = el('locBtn'); if (locBtn) locBtn.onclick = () => locateMeYandex(locBtn);
   loadYandexMaps()
     .then(() => {
-      requestAnimationFrame(() => setTimeout(() => {
-        initAddressMap(el('mapEl'));
-        if (State._map) onMapOk(); else onMapFailed();
-      }, 120));
+      // Xarita konteyneri tayyor bo'lishi uchun bir necha marta urinamiz (0.4s oralab).
+      // Faqat hamma urinish muvaffaqiyatsiz bo'lgandagina ogohlantirish chiqadi.
+      const tryInit = (attempt) => {
+        try { initAddressMap(el('mapEl')); } catch (e) { console.error('map init', e); }
+        if (State._map) { onMapOk(); return; }
+        if (attempt < 3) { setTimeout(() => tryInit(attempt + 1), 400); return; }
+        console.warn('Yandex xarita init muvaffaqiyatsiz (barcha urinishlar)');
+        onMapFailed();
+      };
+      requestAnimationFrame(() => setTimeout(() => tryInit(0), 120));
     })
-    .catch(() => onMapFailed());
+    .catch((e) => { console.warn('Yandex xarita yuklanmadi:', e && e.message); onMapFailed(); });
 }
 function renderTimeSlots() {
   const wrap = el('timeSlots'); if (!wrap) return;

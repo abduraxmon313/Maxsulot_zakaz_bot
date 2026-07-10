@@ -24,11 +24,11 @@ def contact_request(lang: str) -> ReplyKeyboardMarkup:
 
 def main_menu(lang: str) -> ReplyKeyboardMarkup:
     rows: list[list[KeyboardButton]] = []
-    # Mini App tugmasi faqat https URL bo'lganda WebApp sifatida qo'shiladi.
-    if WEBAPP_URL.startswith("https://"):
-        rows.append([KeyboardButton(text=t("btn_open_shop", lang), web_app=WebAppInfo(url=WEBAPP_URL))])
-    else:
-        rows.append([KeyboardButton(text=t("btn_open_shop", lang))])
+    # DIQQAT: "Do'konni ochish" ODDIY tugma (web_app EMAS). Sababi: reply-klaviatura
+    # web_app tugmasi ba'zi klientlarda initData'ni bo'sh yuboradi → auth 401.
+    # Uni bosганда bot INLINE web_app tugmasini yuboradi (u initData'ni to'liq beradi,
+    # худди menyu ☰ tugmasi kabi).
+    rows.append([KeyboardButton(text=t("btn_open_shop", lang))])
     rows.append([
         KeyboardButton(text=t("btn_my_orders", lang)),
         KeyboardButton(text=t("btn_contact", lang)),
