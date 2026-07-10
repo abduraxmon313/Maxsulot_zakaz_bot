@@ -97,7 +97,9 @@ FORCE_TABLES = [
         """
         CREATE TABLE IF NOT EXISTS admin_roles (
             telegram_id BIGINT PRIMARY KEY,
-            role VARCHAR(16) NOT NULL,
+            role VARCHAR(16) NOT NULL DEFAULT 'admin',
+            is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+            is_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
             full_name VARCHAR(255) NOT NULL DEFAULT '',
             username VARCHAR(255),
             added_by BIGINT,
@@ -105,6 +107,20 @@ FORCE_TABLES = [
         )
         """,
     ),
+]
+
+# Eski admin_roles jadvaliga yangi flag ustunlarini qo'shish (bittalik migration).
+ADMIN_ROLE_NEW_COLUMNS = [
+    ("is_admin", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("is_superadmin", "BOOLEAN NOT NULL DEFAULT FALSE"),
+]
+
+# Eski role qatoridan flaglarni to'ldirish (faqat flaglar bo'sh bo'lsa).
+ADMIN_ROLE_BACKFILL = [
+    "UPDATE admin_roles SET is_admin = TRUE "
+    "WHERE role = 'admin' AND is_admin = FALSE AND is_superadmin = FALSE",
+    "UPDATE admin_roles SET is_superadmin = TRUE "
+    "WHERE role = 'superadmin' AND is_superadmin = FALSE",
 ]
 
 
@@ -126,6 +142,18 @@ async def _run_migrations(conn):
             logger.info("Migration: %s jadvali tayyor (IF NOT EXISTS)", name)
         except Exception as e:
             logger.warning("Migration skip table %s: %s", name, e)
+    # Eski admin_roles jadvaliga yangi ustunlar (is_admin, is_superadmin).
+    for col, ddl in ADMIN_ROLE_NEW_COLUMNS:
+        try:
+            await conn.execute(text(f'ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS {col} {ddl}'))
+        except Exception as e:
+            logger.warning("Migration skip admin_roles.%s: %s", col, e)
+    # Bir marta backfill: eski role -> flag. Idempotent (bo'sh flaglar uchun).
+    for sql in ADMIN_ROLE_BACKFILL:
+        try:
+            await conn.execute(text(sql))
+        except Exception as e:
+            logger.warning("Backfill skip: %s", e)
     for ddl in NEW_INDEXES:
         try:
             await conn.execute(text(ddl))

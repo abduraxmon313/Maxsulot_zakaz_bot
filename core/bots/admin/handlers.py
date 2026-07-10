@@ -91,19 +91,69 @@ async def show_all_orders(message: Message, session: AsyncSession):
 
 
 async def _apply_status(session, order, to_status, actor_id, reason=None) -> str | None:
-    """Statusni o'zgartiradi va mijozga bildiradi. Xato bo'lsa xato matnini qaytaradi."""
+    """Statusni o'zgartiradi va mijozga bildiradi. Xato bo'lsa xato matnini qaytaradi.
+
+    Bekor qilish/rad etish holatida:
+      1) Mijozga sabab bilan asosiy xabar.
+      2) Agar buyurtma naqd EMAS (onlayn) va TO'LANGAN bo'lsa — pul qaytarish
+         uchun admin bilan bog'lanish (admin_contact @username) yuboriladi.
+      3) Barcha super adminlarga bildirishnoma jo'natiladi (audit + kuzatuv).
+    """
     try:
         await order_service.change_status(session, order, to_status, actor_id=actor_id, note=reason)
     except OrderError as e:
         return str(e)
 
-    # Mijozga avtomatik xabar (uning tilida) — bekor/rad bo'lsa sabab bilan.
+    # 1) Mijozga asosiy xabar
     lang = await user_service.get_language(session, order.user_id)
     status_text = t(f"status_{order.status}", lang)
     msg = f"{status_text}\n{t('order_number', lang)} #{order.order_number}"
     if reason and order.status in ("canceled", "rejected"):
         msg += f"\n📝 {t('cancel_reason_label', lang)}: {reason}"
     await notify_service.notify_customer(order.user_id, msg)
+
+    # 2) Onlayn to'lov qilingan bo'lsa — pulni qaytarish uchun admin aloqasi
+    if order.status in ("canceled", "rejected") and order.is_paid and order.payment_method != "cash":
+        currency = await settings_service.get("currency", "so'm")
+        provider_label = (order.payment_method or "online").capitalize()
+        contact = (await settings_service.get("admin_contact", "")).strip()
+        if contact:
+            refund_msg = t(
+                "refund_notice_with_contact", lang,
+                provider=provider_label,
+                contact=contact,
+                number=order.order_number,
+                total=fmt_money(order.grand_total, currency),
+            )
+        else:
+            refund_msg = t(
+                "refund_notice_no_contact", lang,
+                provider=provider_label,
+                number=order.order_number,
+            )
+        await notify_service.notify_customer(order.user_id, refund_msg)
+
+    # 3) Superadminlarga audit xabari (kim bekor qildi, sabab, to'lov holati)
+    if order.status in ("canceled", "rejected"):
+        currency = await settings_service.get("currency", "so'm")
+        pay_status = ("✅ to'langan" if order.is_paid else "❌ to'lanmagan")
+        pay_method = order.payment_method or "—"
+        reason_line = f"\n📝 Sabab: {reason}" if reason else ""
+        who = f"<code>{actor_id}</code>" if actor_id else "admin"
+        header = "❌ <b>Buyurtma bekor qilindi</b>" if order.status == "canceled" else "🚫 <b>Buyurtma rad etildi</b>"
+        text_msg = (
+            f"{header}\n\n"
+            f"🧾 #{order.order_number}\n"
+            f"💰 {fmt_money(order.grand_total, currency)} — {pay_method} ({pay_status})\n"
+            f"👤 Mijoz: <code>{order.user_id}</code>\n"
+            f"👨‍💼 Bekor qilgan: {who}"
+            f"{reason_line}"
+        )
+        try:
+            await notify_service.notify_superadmins(text_msg)
+        except Exception as e:
+            logger.warning("Superadminlarga bekor qilingan buyurtma xabari yubormay: %s", e)
+
     return None
 
 

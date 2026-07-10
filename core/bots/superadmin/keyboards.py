@@ -32,6 +32,7 @@ EDITABLE_SETTINGS: list[tuple[str, str, str]] = [
     ("welcome_image", "🖼 Salom rasmi", "image"),
     ("currency", "💱 Valyuta belgisi", "text"),
     ("phone", "☎️ Telefon", "text"),
+    ("admin_contact", "🧑‍💼 Admin bilan bog'lanish (@username)", "text"),
     ("working_hours", "🕒 Ish vaqti", "text"),
     ("min_order_amount", "🧾 Minimal buyurtma (so'm)", "int"),
     ("delivery_fee", "🚚 Yetkazib berish narxi (so'm)", "int"),
@@ -66,23 +67,39 @@ def roles_menu_inline() -> InlineKeyboardMarkup:
     ])
 
 
-def roles_list_inline(rows, role: str) -> InlineKeyboardMarkup:
-    """Rol yozuvlari ro'yxati — har birining yonida "🗑 Chiqarish" tugmasi.
+def _role_badges(r) -> str:
+    """Foydalanuvchining joriy rollarini kichik belgi bilan ko'rsatadi."""
+    parts = []
+    if getattr(r, "is_superadmin", False):
+        parts.append("👑")
+    if getattr(r, "is_admin", False):
+        parts.append("🛡")
+    return "".join(parts)
 
-    Env orqali berilgan rollarni bu ro'yxatga qo'shmaymiz (o'chirib bo'lmaydi).
+
+def roles_list_inline(rows, role: str) -> InlineKeyboardMarkup:
+    """Rol yozuvlari ro'yxati — har birining yonida ROL BOZINDA "🗑 Chiqarish".
+
+    Callback: `roles:del:<role>:<tid>` — bir foydalanuvchi ikki rolga ega bo'lsa
+    ham bu tugma FAQAT joriy ro'yxatdagi rolni olib tashlaydi (ikkinchisi qoladi).
+    Env orqali berilgan rollar bu ro'yxatga tushmaydi (o'chirib bo'lmaydi).
     """
     kb = []
     for r in rows:
         name = r.full_name or (f"@{r.username}" if r.username else "")
-        label = f"🗑 {r.telegram_id}" + (f" · {name}" if name else "")
-        kb.append([InlineKeyboardButton(text=label, callback_data=f"roles:del:{r.telegram_id}")])
+        badges = _role_badges(r)
+        label = f"🗑 {r.telegram_id}" + (f" · {name}" if name else "") + (f" {badges}" if badges else "")
+        kb.append([InlineKeyboardButton(
+            text=label,
+            callback_data=f"roles:del:{role}:{r.telegram_id}",
+        )])
     kb.append([InlineKeyboardButton(text="⬅️ Orqaga", callback_data="roles:menu")])
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
-def roles_confirm_delete_inline(telegram_id: int) -> InlineKeyboardMarkup:
+def roles_confirm_delete_inline(role: str, telegram_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="✅ Ha, chiqarish", callback_data=f"roles:delok:{telegram_id}"),
+        InlineKeyboardButton(text="✅ Ha, chiqarish", callback_data=f"roles:delok:{role}:{telegram_id}"),
         InlineKeyboardButton(text="✖️ Bekor", callback_data="roles:menu"),
     ]])
 

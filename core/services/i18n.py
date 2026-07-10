@@ -75,6 +75,58 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "order_number": {"uz": "Buyurtma", "ru": "Заказ", "en": "Order"},
     "cancel_reason_label": {"uz": "Sabab", "ru": "Причина", "en": "Reason"},
 
+    # ── Buyurtma bekor bo'ldi + to'lov qaytarish (naqddan boshqasi to'langan) ──
+    "refund_notice_with_contact": {
+        "uz": (
+            "💸 <b>Pulni qaytarish</b>\n"
+            "Buyurtmangiz onlayn to'langan edi ({provider}). Pulingizni qaytarib "
+            "olish uchun admin bilan bog'laning: {contact}\n"
+            "Buyurtma raqami: #{number}\n"
+            "Jami: {total}"
+        ),
+        "ru": (
+            "💸 <b>Возврат средств</b>\n"
+            "Ваш заказ был оплачен онлайн ({provider}). Для возврата свяжитесь "
+            "с администратором: {contact}\n"
+            "Номер заказа: #{number}\n"
+            "Сумма: {total}"
+        ),
+        "en": (
+            "💸 <b>Refund</b>\n"
+            "Your order was paid online ({provider}). To get a refund, contact "
+            "the administrator: {contact}\n"
+            "Order number: #{number}\n"
+            "Total: {total}"
+        ),
+    },
+    "refund_notice_no_contact": {
+        "uz": (
+            "💸 <b>Pulni qaytarish</b>\n"
+            "Buyurtmangiz onlayn to'langan edi ({provider}). Pulni qaytarish "
+            "uchun tez orada siz bilan bog'lanamiz. Buyurtma raqami: #{number}."
+        ),
+        "ru": (
+            "💸 <b>Возврат средств</b>\n"
+            "Ваш заказ был оплачен онлайн ({provider}). Мы скоро свяжемся с вами "
+            "для возврата средств. Номер заказа: #{number}."
+        ),
+        "en": (
+            "💸 <b>Refund</b>\n"
+            "Your order was paid online ({provider}). We will contact you soon "
+            "regarding the refund. Order number: #{number}."
+        ),
+    },
+    "contact_admin_title": {
+        "uz": "🧑‍💼 Admin bilan bog'lanish",
+        "ru": "🧑‍💼 Связь с администратором",
+        "en": "🧑‍💼 Contact admin",
+    },
+    "contact_admin_none": {
+        "uz": "Admin aloqasi hozircha ko'rsatilmagan. Iltimos, keyinroq qayta urinib ko'ring.",
+        "ru": "Контакт администратора пока не указан. Пожалуйста, попробуйте позже.",
+        "en": "Admin contact is not set yet. Please try again later.",
+    },
+
     # ── Buyurtma / to'lov oqimi ──
     "order_empty": {
         "uz": "Savat bo'sh. Iltimos, avval mahsulot tanlang.",
