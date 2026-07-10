@@ -46,6 +46,7 @@ async def list_products(
     category_id: int | None = None,
     query: str | None = None,
     only_active: bool = True,
+    include_deleted: bool = False,
     sort: str = "popular",
     limit: int = 100,
     offset: int = 0,
@@ -53,6 +54,11 @@ async def list_products(
     stmt = select(Product)
     if only_active:
         stmt = _active_filter(stmt)
+    elif not include_deleted:
+        # only_active=False bilan chaqirilganda ham SOFT-DELETED mahsulotlar
+        # standart holatda ko'rinmasin — faqat "aktiv/nofaol" farqi qoladi.
+        # (superadmin ro'yxatida o'chirilgan mahsulot ko'rinib qolmasligi uchun)
+        stmt = stmt.where(Product.deleted_at.is_(None))
     if category_id:
         stmt = stmt.where(Product.category_id == category_id)
     if query:
