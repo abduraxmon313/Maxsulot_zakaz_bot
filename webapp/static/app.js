@@ -108,6 +108,7 @@ const I18N = {
   asap: { uz: 'Imkon qadar tez', ru: 'Как можно скорее', en: 'As soon as possible' },
   gate_title: { uz: 'Do\'kon faqat Telegram orqali ochiladi', ru: 'Магазин открывается только через Telegram', en: 'The shop opens only via Telegram' },
   gate_text: { uz: 'Iltimos, do\'kon botini oching va «Do\'konni ochish» tugmasi orqali kiring.', ru: 'Пожалуйста, откройте бота магазина и войдите через кнопку «Открыть магазин».', en: 'Please open the shop bot and enter via the “Open shop” button.' },
+  open_via_menu: { uz: 'Buyurtma va to\'lov uchun do\'konni pastdagi ☰ menyu tugmasi orqali oching.', ru: 'Для заказа и оплаты откройте магазин через кнопку меню ☰ внизу.', en: 'To order & pay, open the shop via the ☰ menu button below.' },
   map_error: { uz: 'Xarita yuklashda xatolik. Yetkazib berish uchun manzil tanlab bo\'lmaydi — faqat «Olib ketish» mavjud.', ru: 'Ошибка загрузки карты. Адрес доставки выбрать нельзя — доступен только «Самовывоз».', en: 'Map failed to load. Delivery address can\'t be selected — only “Pickup” is available.' },
   map_note: { uz: 'Xarita yuklanmadi — manzilingizni quyida matn ko\'rinishida yozing yoki «Olib ketish»ni tanlang.', ru: 'Карта не загрузилась — введите адрес текстом ниже или выберите «Самовывоз».', en: 'Map didn\'t load — type your address below or choose “Pickup”.' },
   loc_fail: { uz: 'Joylashuvni aniqlab bo\'lmadi', ru: 'Не удалось определить локацию', en: 'Could not detect location' },
@@ -227,12 +228,16 @@ function loadYandexMaps() {
   const key = State.config && State.config.maps_api_key;
   if (!key) return Promise.reject(new Error('no_key'));
   _ymapsPromise = new Promise((resolve, reject) => {
+    // Xato bo'lsa promise'ni reset qilamiz — keyingi urinishda qayta yuklansin.
+    const fail = (e) => { _ymapsPromise = null; reject(e || new Error('load')); };
     const s = document.createElement('script');
     s.src = `https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(key)}&lang=${ymLang()}`;
     s.async = true;
-    s.onload = () => { if (window.ymaps && window.ymaps.ready) window.ymaps.ready(resolve); else reject(new Error('load')); };
-    s.onerror = () => { _ymapsPromise = null; reject(new Error('load')); };
+    s.onload = () => { if (window.ymaps && window.ymaps.ready) window.ymaps.ready(resolve); else fail(new Error('no_ymaps')); };
+    s.onerror = () => fail(new Error('script_error'));
     document.head.appendChild(s);
+    // Osilib qolmasligi uchun timeout.
+    setTimeout(() => { if (!(window.ymaps && window.ymaps.Map)) fail(new Error('timeout')); }, 15000);
   });
   return _ymapsPromise;
 }
@@ -504,9 +509,22 @@ function setShopLogo() {
   }
 }
 
+function showAuthBanner() {
+  if (el('authBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'authBanner';
+  b.className = 'auth-banner';
+  b.innerHTML = `<span data-ic="alert"></span><span>${L('open_via_menu')}</span>`;
+  document.body.appendChild(b);
+  applyIcons(b);
+}
+
 async function init() {
   // Faqat Telegram ichida ishlaydi.
   if (!isInTelegram()) { showTelegramGate(); return; }
+  // Telegram ichida, lekin initData bo'sh bo'lsa — buyurtma/auth ishlamaydi.
+  // Foydalanuvchini ishonchli ☰ menyu tugmasiga yo'naltiramiz.
+  if (!tg.initData || tg.initData.length === 0) { showAuthBanner(); }
   applyIcons(document);
   try { State.config = await api('/config'); }
   catch (e) { State.config = { shop_name: "Do'kon", currency: "so'm", primary_color: '#7A573F', min_order_amount: 0, delivery_fee: 0, free_delivery_from: 0, is_open: true, delivery_slots: [] }; }
