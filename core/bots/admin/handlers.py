@@ -14,8 +14,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import is_admin
 from core.services import (
+    admin_service,
     catalog_service,
     notify_service,
     order_service,
@@ -35,7 +35,11 @@ router = Router()
 class IsAdmin(BaseFilter):
     async def __call__(self, event) -> bool:
         user = getattr(event, "from_user", None)
-        return bool(user and is_admin(user.id))
+        if not user:
+            return False
+        # Env + DB (bot orqali qo'shilgan adminlar) — kesh TTL bilan yangilanadi.
+        await admin_service.ensure_loaded()
+        return admin_service.is_admin_sync(user.id)
 
 
 router.message.filter(IsAdmin())

@@ -12,7 +12,7 @@ import logging
 from aiogram.exceptions import TelegramRetryAfter
 
 from core.bots import registry
-from core.config import ADMIN_IDS
+from core.services import admin_service
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,14 @@ async def notify_customer(telegram_id: int, text: str, reply_markup=None) -> boo
 
 
 async def notify_admins(text: str, reply_markup=None) -> int:
-    """Admin bot orqali barcha adminlarga xabar. Yuborilganlar sonini qaytaradi."""
+    """Admin bot orqali barcha adminlarga xabar (ENV + DB'dagi rollar).
+
+    Yuborilganlar sonini qaytaradi.
+    """
+    await admin_service.ensure_loaded()
+    admin_ids = admin_service.all_admin_ids()
     sent = 0
-    for admin_id in ADMIN_IDS:
+    for admin_id in admin_ids:
         if await _safe_send(registry.admin_bot, admin_id, text, reply_markup):
             sent += 1
     return sent

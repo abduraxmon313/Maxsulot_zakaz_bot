@@ -17,6 +17,7 @@ BTN_ANALYTICS = "📊 Analitika"
 BTN_TOGGLE_OPEN = "🔓 Do'kon holati"
 BTN_SHOP_LOCATION = "📍 Do'kon manzili"
 BTN_STATUS = "ℹ️ Tizim holati"
+BTN_ROLES = "👥 Adminlar boshqaruvi"
 BTN_CANCEL = "❌ Bekor qilish"
 BTN_SKIP = "⏭ O'tkazib yuborish"
 BTN_SEND_LOCATION = "📍 Lokatsiyani yuborish"
@@ -49,9 +50,41 @@ def main_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BTN_ADD_CATEGORY), KeyboardButton(text=BTN_CATEGORIES)],
             [KeyboardButton(text=BTN_ANALYTICS), KeyboardButton(text=BTN_TOGGLE_OPEN)],
             [KeyboardButton(text=BTN_SHOP_LOCATION), KeyboardButton(text=BTN_STATUS)],
+            [KeyboardButton(text=BTN_ROLES)],
         ],
         resize_keyboard=True,
     )
+
+
+def roles_menu_inline() -> InlineKeyboardMarkup:
+    """Adminlar boshqaruvi asosiy menyusi."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👑 Superadminlar ro'yxati", callback_data="roles:list:superadmin")],
+        [InlineKeyboardButton(text="🛡 Adminlar ro'yxati", callback_data="roles:list:admin")],
+        [InlineKeyboardButton(text="➕ Superadmin qo'shish", callback_data="roles:add:superadmin")],
+        [InlineKeyboardButton(text="➕ Admin qo'shish", callback_data="roles:add:admin")],
+    ])
+
+
+def roles_list_inline(rows, role: str) -> InlineKeyboardMarkup:
+    """Rol yozuvlari ro'yxati — har birining yonida "🗑 Chiqarish" tugmasi.
+
+    Env orqali berilgan rollarni bu ro'yxatga qo'shmaymiz (o'chirib bo'lmaydi).
+    """
+    kb = []
+    for r in rows:
+        name = r.full_name or (f"@{r.username}" if r.username else "")
+        label = f"🗑 {r.telegram_id}" + (f" · {name}" if name else "")
+        kb.append([InlineKeyboardButton(text=label, callback_data=f"roles:del:{r.telegram_id}")])
+    kb.append([InlineKeyboardButton(text="⬅️ Orqaga", callback_data="roles:menu")])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+
+def roles_confirm_delete_inline(telegram_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Ha, chiqarish", callback_data=f"roles:delok:{telegram_id}"),
+        InlineKeyboardButton(text="✖️ Bekor", callback_data="roles:menu"),
+    ]])
 
 
 def cancel_menu() -> ReplyKeyboardMarkup:

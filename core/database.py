@@ -124,7 +124,7 @@ async def create_tables():
             return
         # Barcha modellarni import qilamiz — Base.metadata to'lishi uchun.
         from core.models import (  # noqa: F401
-            setting, user, category, product, banner, order, media,
+            setting, user, category, product, banner, order, media, admin_role,
         )
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

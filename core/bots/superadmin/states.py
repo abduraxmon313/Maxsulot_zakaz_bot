@@ -31,3 +31,8 @@ class ShopLocation(StatesGroup):
     """Do'kon lokatsiyasini o'rnatish: lokatsiya + izoh."""
     location = State()
     comment = State()
+
+
+class AddAdminRole(StatesGroup):
+    """Yangi admin/superadmin qo'shish — telegram_id kutiladi."""
+    telegram_id = State()

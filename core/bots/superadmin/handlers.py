@@ -18,14 +18,14 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import WEBAPP_URL, is_superadmin
+from core.config import WEBAPP_URL
 from core.models.user import User
-from core.services import catalog_service, media_service, order_service, settings_service
+from core.services import admin_service, catalog_service, media_service, order_service, settings_service
 from core.services.i18n import STATUS_LABELS
 from core.utils import fmt_money
 from core.bots.superadmin import keyboards as kb
 from core.bots.superadmin.states import (
-    AddCategory, AddProduct, EditPrice, EditSetting, EditStock, ShopLocation,
+    AddAdminRole, AddCategory, AddProduct, EditPrice, EditSetting, EditStock, ShopLocation,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,12 @@ router = Router()
 class IsSuperAdmin(BaseFilter):
     async def __call__(self, event) -> bool:
         user = getattr(event, "from_user", None)
-        return bool(user and is_superadmin(user.id))
+        if not user:
+            return False
+        # Env doim tekshiriladi (root doim ochiq). DB rollarini keshdan olamiz —
+        # ensure_loaded TTL bilan yangilaydi (yangi qo'shilgan superadmin darhol ta'sir qiladi).
+        await admin_service.ensure_loaded()
+        return admin_service.is_superadmin_sync(user.id)
 
 
 router.message.filter(IsSuperAdmin())
@@ -518,3 +523,205 @@ async def system_status(message: Message):
         f"   • Majburiy yopish: {'🔴 YOQILGAN (vaqtincha yopiq)' if force_closed else '🟢 yo‘q'}\n"
         f"   • Ish vaqti: <code>{hours or '—'}</code> (O‘zbekiston vaqti)"
     )
+
+
+
+# ═════════════════════════════════════════════════════════════
+#  ADMINLAR / SUPER ADMINLAR BOSHQARUVI
+#  (rol qo'shish/o'chirish, ro'yxatlar. Env orqali berilganlar o'chirilmaydi.)
+# ═════════════════════════════════════════════════════════════
+def _role_title(role: str) -> str:
+    return "👑 Super Admin" if role == "superadmin" else "🛡 Admin"
+
+
+def _fmt_role_row(rec) -> str:
+    """Ro'yxat elementi uchun bir qatorli ko'rinish."""
+    who = rec.full_name or ""
+    uname = f" · @{rec.username}" if rec.username else ""
+    return f"• <code>{rec.telegram_id}</code>{(' — ' + who) if who else ''}{uname}"
+
+
+@router.message(F.text == kb.BTN_ROLES)
+async def roles_menu(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "👥 <b>Adminlar boshqaruvi</b>\n\n"
+        "Bu yerdan admin va super adminlarni qo'shish/chiqarish mumkin.\n"
+        "• Qo'shish uchun foydalanuvchining <b>Telegram ID</b> raqami kerak "
+        "(u avval botga <code>/start</code> bosgan bo'lsa yaxshi).\n"
+        "• Chiqarish — ro'yxatdan tanlab bosiladi (ID kerak emas).",
+        reply_markup=kb.roles_menu_inline(),
+    )
+
+
+@router.callback_query(F.data == "roles:menu")
+async def roles_menu_cb(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    try:
+        await callback.message.edit_text(
+            "👥 <b>Adminlar boshqaruvi</b>\n\nAmalni tanlang:",
+            reply_markup=kb.roles_menu_inline(),
+        )
+    except Exception:
+        await callback.message.answer(
+            "👥 <b>Adminlar boshqaruvi</b>\n\nAmalni tanlang:",
+            reply_markup=kb.roles_menu_inline(),
+        )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("roles:list:"))
+async def roles_list(callback: CallbackQuery, session: AsyncSession):
+    role = callback.data.split(":", 2)[2]
+    if role not in {"admin", "superadmin"}:
+        await callback.answer("Noma'lum rol.", show_alert=True)
+        return
+    rows = await admin_service.list_by_role(session, role)
+    title = _role_title(role) + " ro'yxati"
+
+    # ENV rollari — o'chirib bo'lmaydigan (root) ro'yxat
+    env_ids = admin_service.env_superadmin_ids() if role == "superadmin" else admin_service.env_admin_ids()
+    text_lines = [f"<b>{title}</b>", ""]
+    if env_ids:
+        text_lines.append("🔒 <i>ENV (o'chirib bo'lmaydi):</i>")
+        for tid in sorted(env_ids):
+            text_lines.append(f"• <code>{tid}</code>")
+        text_lines.append("")
+
+    if rows:
+        text_lines.append("📋 <i>Bot orqali qo'shilgan (chiqarish mumkin):</i>")
+        for r in rows:
+            text_lines.append(_fmt_role_row(r))
+    else:
+        text_lines.append("📋 <i>Bot orqali qo'shilgan hech kim yo'q.</i>")
+
+    try:
+        await callback.message.edit_text(
+            "\n".join(text_lines),
+            reply_markup=kb.roles_list_inline(rows, role),
+        )
+    except Exception:
+        await callback.message.answer(
+            "\n".join(text_lines),
+            reply_markup=kb.roles_list_inline(rows, role),
+        )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("roles:add:"))
+async def roles_add_prompt(callback: CallbackQuery, state: FSMContext):
+    role = callback.data.split(":", 2)[2]
+    if role not in {"admin", "superadmin"}:
+        await callback.answer("Noma'lum rol.", show_alert=True)
+        return
+    await state.set_state(AddAdminRole.telegram_id)
+    await state.update_data(role=role, added_by=callback.from_user.id)
+    await callback.message.answer(
+        f"➕ Yangi <b>{_role_title(role)}</b> qo'shish\n\n"
+        "Foydalanuvchining <b>Telegram ID</b> raqamini yuboring (faqat raqam).\n\n"
+        "💡 Foydalanuvchi o'zining ID sini olishi uchun @userinfobot ga yozishi mumkin. "
+        "Yaxshisi u avval botlarimizdan biriga <code>/start</code> bossin — shunda ismi ham saqlanadi.",
+        reply_markup=kb.cancel_menu(),
+    )
+    await callback.answer()
+
+
+@router.message(AddAdminRole.telegram_id, F.text)
+async def roles_add_value(message: Message, state: FSMContext, session: AsyncSession):
+    text_raw = (message.text or "").strip()
+    # BTN_CANCEL — global handler tomonidan qamrab olinadi
+    digits = "".join(ch for ch in text_raw if ch.isdigit())
+    if not digits or len(digits) < 5:
+        await message.answer(
+            "❗️ Telegram ID faqat raqamlardan iborat bo'lishi kerak (odatda 8-10 xonali).\n"
+            "Iltimos, qaytadan kiriting:"
+        )
+        return
+    tid = int(digits)
+    data = await state.get_data()
+    role = data.get("role", "admin")
+    added_by = int(data.get("added_by") or message.from_user.id)
+
+    # O'ziga o'zini qo'shish — mantiqsiz, lekin xatolik ham emas.
+    # ENV superadmin — allaqachon ochiq huquqli.
+    if admin_service.is_env_superadmin(tid) and role == "superadmin":
+        await state.clear()
+        await message.answer(
+            f"ℹ️ <code>{tid}</code> allaqachon ENV orqali super admin. "
+            "Qo'shimcha yozuv kerak emas.",
+            reply_markup=kb.main_menu(),
+        )
+        return
+
+    # Foydalanuvchi jadvalidan ism/username ni topamiz (bor bo'lsa).
+    from core.services import user_service
+    existing_user = await user_service.get_by_telegram_id(session, tid)
+    if existing_user is None:
+        # Foydalanuvchi hali botga /start bosmagan — ogohlantiramiz, lekin qo'shamiz.
+        # (Botni birinchi ochganida user_service.upsert avtomatik ismini saqlaydi.)
+        note = ("\n\n⚠️ Bu ID hali biror botga <code>/start</code> bosmagan — "
+                "ismi keyinroq avtomatik saqlanadi.")
+    else:
+        note = ""
+
+    rec = await admin_service.add_role(
+        session,
+        telegram_id=tid,
+        role=role,
+        added_by=added_by,
+        full_name=(existing_user.full_name if existing_user else ""),
+        username=(existing_user.username if existing_user else None),
+    )
+    await state.clear()
+    who = rec.full_name or ""
+    await message.answer(
+        f"✅ Rol berildi: {_role_title(role)}\n"
+        f"👤 <code>{tid}</code>" + (f" — {who}" if who else "") + note,
+        reply_markup=kb.main_menu(),
+    )
+
+
+@router.callback_query(F.data.startswith("roles:del:"))
+async def roles_delete_prompt(callback: CallbackQuery, session: AsyncSession):
+    tid = int(callback.data.split(":")[2])
+    rec = await admin_service.get_role(session, tid)
+    if rec is None:
+        await callback.answer("Yozuv topilmadi (allaqachon o'chirilgan).", show_alert=True)
+        return
+    # Foydalanuvchi o'zini o'zi chiqarib yubormasin.
+    if tid == callback.from_user.id:
+        await callback.answer(
+            "❗️ O'zingizni chiqarib yuborolmaysiz.",
+            show_alert=True,
+        )
+        return
+    name = rec.full_name or (f"@{rec.username}" if rec.username else "")
+    await callback.message.answer(
+        f"❓ <b>{_role_title(rec.role)}</b> huquqidan chiqarasizmi?\n"
+        f"👤 <code>{tid}</code>" + (f" — {name}" if name else ""),
+        reply_markup=kb.roles_confirm_delete_inline(tid),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("roles:delok:"))
+async def roles_delete_do(callback: CallbackQuery, session: AsyncSession):
+    tid = int(callback.data.split(":")[2])
+    if tid == callback.from_user.id:
+        await callback.answer("❗️ O'zingizni chiqarib yuborolmaysiz.", show_alert=True)
+        return
+    ok = await admin_service.remove_role(session, tid)
+    if ok:
+        try:
+            await callback.message.edit_text(
+                f"🗑 <code>{tid}</code> ro'yxatdan chiqarildi.",
+                reply_markup=kb.roles_menu_inline(),
+            )
+        except Exception:
+            await callback.message.answer(
+                f"🗑 <code>{tid}</code> ro'yxatdan chiqarildi.",
+                reply_markup=kb.roles_menu_inline(),
+            )
+        await callback.answer("✅ Chiqarildi", show_alert=False)
+    else:
+        await callback.answer("Yozuv topilmadi.", show_alert=True)
