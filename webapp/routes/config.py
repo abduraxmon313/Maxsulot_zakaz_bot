@@ -17,6 +17,7 @@ def _image_url(media_id: str) -> str:
 
 @router.get("/config")
 async def get_config():
+    # (do'kon holati/ish vaqti doim yangi bo'lsin — kesh no-cache middleware'da)
     s = await settings_service.get_all()
     is_open = await settings_service.is_shop_open()  # O'zbekiston vaqti bo'yicha
     slots = await settings_service.delivery_slots()  # yetkazib berish vaqtlari (UZ)

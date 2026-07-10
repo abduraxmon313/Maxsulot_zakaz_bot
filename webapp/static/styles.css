@@ -338,6 +338,10 @@ img { display: block; max-width: 100%; }
 .tg-gate h2 { font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 12px; max-width: 340px; }
 .tg-gate p { color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 320px; }
 
+/* ═══ Auth banner (initData bo'sh — menyu tugmasiga yo'naltirish) ═══ */
+.auth-banner { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-h) + 14px); z-index: 450; display: flex; align-items: center; gap: 10px; background: #FCEFE0; border: 1px solid #F0D9B8; color: #8A5A12; padding: 12px 16px; border-radius: var(--r); font-size: 13px; font-weight: 600; line-height: 1.4; box-shadow: var(--sh-md); }
+.auth-banner svg { width: 20px; height: 20px; flex-shrink: 0; }
+
 /* ═══ Toast ═══ */
 .toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 24px); transform: translate(-50%, 20px); z-index: 400; background: var(--text); color: #fff; padding: 13px 22px; border-radius: var(--r-full); font-size: 14px; font-weight: 600; box-shadow: var(--sh-lg); opacity: 0; pointer-events: none; transition: all var(--t) var(--ease); max-width: 86%; text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }

@@ -81,7 +81,18 @@ def settings_inline() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=label, callback_data=f"set:{key}")]
         for key, label, _ in EDITABLE_SETTINGS
     ]
+    # Do'kon manzili (lokatsiya + izoh) — sozlamalar ro'yxatida ham bo'lsin.
+    rows.append([InlineKeyboardButton(text=BTN_SHOP_LOCATION, callback_data="shoploc")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def shop_status_inline(force_closed: bool) -> InlineKeyboardMarkup:
+    """Do'konni aniq (ko'r-ko'rona emas) ochish/vaqtincha yopish tugmalari."""
+    if force_closed:
+        btn = InlineKeyboardButton(text="🟢 Do'konni ochish", callback_data="shopopen")
+    else:
+        btn = InlineKeyboardButton(text="🔴 Vaqtincha yopish", callback_data="shopclose")
+    return InlineKeyboardMarkup(inline_keyboard=[[btn]])
 
 
 def categories_inline(categories, prefix: str = "pcat") -> InlineKeyboardMarkup:

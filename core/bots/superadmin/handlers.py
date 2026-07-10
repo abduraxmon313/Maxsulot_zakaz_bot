@@ -364,30 +364,60 @@ async def edit_stock_value(message: Message, state: FSMContext, session: AsyncSe
 # ═════════════════════════════════════════════════════════════
 #  DO'KON OCHIQ/YOPIQ
 # ═════════════════════════════════════════════════════════════
-@router.message(F.text == kb.BTN_TOGGLE_OPEN)
-async def toggle_open(message: Message):
-    # Do'kon ASOSAN ish vaqti bo'yicha ishlaydi. Bu tugma faqat VAQTINCHA majburiy
-    # yopish/ochish uchun (force_closed). Ish vaqti — sozlamalardagi «Ish vaqti».
-    closed = await settings_service.get_bool("force_closed", False)
-    new_closed = not closed
-    await settings_service.set("force_closed", "1" if new_closed else "0")
+async def _shop_status_text() -> str:
+    force_closed = await settings_service.get_bool("force_closed", False)
     hours = await settings_service.get("working_hours", "")
-    if new_closed:
-        state_txt = "🔴 VAQTINCHA YOPILDI — buyurtmalar qabul qilinmaydi (qo'lda)"
+    effective = await settings_service.is_shop_open()
+    if effective:
+        line = "🟢 <b>OCHIQ</b> — buyurtmalar qabul qilinmoqda"
+    elif force_closed:
+        line = "🔴 <b>YOPIQ</b> — siz qo'lda vaqtincha yopib qo'ygansiz"
     else:
-        if await settings_service.is_shop_open():
-            state_txt = "🟢 OCHIQ — buyurtmalar qabul qilinmoqda"
-        else:
-            state_txt = (
-                f"🟡 Majburiy yopish olib tashlandi, lekin hozir ish vaqti emas ({hours}).\n"
-                "Do'kon ish vaqti kelganda avtomatik ochiladi."
-            )
-    await message.answer(f"Do'kon holati: <b>{state_txt}</b>", reply_markup=kb.main_menu())
+        line = f"🟡 <b>Hozir ish vaqti emas</b> ({hours}) — ish vaqti kelganda ochiladi"
+    return (
+        f"🏪 <b>Do'kon holati</b>\n\n{line}\n\n"
+        f"🕒 Ish vaqti: <code>{hours or '—'}</code> (O‘zbekiston vaqti)\n"
+        "Pastdagi tugma bilan boshqaring."
+    )
+
+
+@router.message(F.text == kb.BTN_TOGGLE_OPEN)
+async def shop_status_menu(message: Message):
+    # Ko'r-ko'rona toggle o'rniga — joriy holatni ko'rsatamiz va aniq tugma beramiz.
+    force_closed = await settings_service.get_bool("force_closed", False)
+    await message.answer(await _shop_status_text(), reply_markup=kb.shop_status_inline(force_closed))
+
+
+@router.callback_query(F.data == "shopopen")
+async def shop_open(callback: CallbackQuery):
+    await settings_service.set("force_closed", "0")
+    try:
+        await callback.message.edit_text(await _shop_status_text(), reply_markup=kb.shop_status_inline(False))
+    except Exception:
+        pass
+    await callback.answer("🟢 Do'kon ish vaqti bo'yicha ochiq")
+
+
+@router.callback_query(F.data == "shopclose")
+async def shop_close(callback: CallbackQuery):
+    await settings_service.set("force_closed", "1")
+    try:
+        await callback.message.edit_text(await _shop_status_text(), reply_markup=kb.shop_status_inline(True))
+    except Exception:
+        pass
+    await callback.answer("🔴 Do'kon vaqtincha yopildi")
 
 
 # ═════════════════════════════════════════════════════════════
 #  DO'KON MANZILI (lokatsiya + izoh)
 # ═════════════════════════════════════════════════════════════
+@router.callback_query(F.data == "shoploc")
+async def shop_location_from_settings(callback: CallbackQuery, state: FSMContext):
+    # «Do'kon sozlamalari» ichidagi 📍 tugmasi orqali ham lokatsiya qo'yish mumkin.
+    await callback.answer()
+    await shop_location_start(callback.message, state)
+
+
 @router.message(F.text == kb.BTN_SHOP_LOCATION)
 async def shop_location_start(message: Message, state: FSMContext):
     lat = await settings_service.get("shop_lat", "")
