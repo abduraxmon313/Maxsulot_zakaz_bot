@@ -487,7 +487,14 @@ function showTelegramGate() {
 }
 
 function isInTelegram() {
-  return !!(tg && typeof tg.initData === 'string' && tg.initData.length > 0);
+  // Telegram ichida ekanligini bir nechta signal bilan aniqlaymiz. `initData` ba'zi
+  // launch usullarida bo'sh kelishi mumkin — shунga qaramay Telegram deb hisoblaymiz.
+  // (Oddiy brauzerda: initData bo'sh, user yo'q, platform 'unknown' → gate ko'rinadi.)
+  if (!tg) return false;
+  if (typeof tg.initData === 'string' && tg.initData.length > 0) return true;
+  if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) return true;
+  if (tg.platform && tg.platform !== 'unknown') return true;
+  return false;
 }
 
 function setShopLogo() {
