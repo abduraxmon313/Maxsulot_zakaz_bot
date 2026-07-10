@@ -4,6 +4,12 @@
    (Gold — faqat urg'u: tugmalar, faol holatlar, chegaralar, ikonalar)
    ═══════════════════════════════════════════════════════════ */
 
+/* HTML `hidden` atributi HAR DOIM ustun bo'lishi kerak.
+   Aks holda `.notice { display:flex }` yoki `.map-warn { display:flex }` kabi
+   qoidalar (bir xil specificity, keyingi cascade) `[hidden]`ni bekor qilib,
+   "Do'kon yopiq" banner yoki "Xarita yuklanmadi" note noto'g'ri ko'rinib qoladi. */
+[hidden] { display: none !important; }
+
 :root {
   /* Brand — oltin faqat AKSENT */
   --gold: #D4AF37;            /* Soft Gold */
