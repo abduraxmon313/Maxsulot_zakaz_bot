@@ -40,16 +40,25 @@ async def _refresh_cache() -> None:
     _admin_ids = {int(r.telegram_id) for r in rows}
     _superadmin_ids = {int(r.telegram_id) for r in rows if r.role == ROLE_SUPERADMIN}
     _loaded_at = time.time()
+    logger.info(
+        "admin_roles kesh yangilandi: jami=%d, superadmin=%d",
+        len(_admin_ids), len(_superadmin_ids),
+    )
 
 
 async def ensure_loaded() -> None:
     """Kesh TTL o'tgan bo'lsa yangilaydi. Xavfsizlik uchun xatoda ham qaytadi."""
+    global _loaded_at
     if time.time() - _loaded_at <= _CACHE_TTL:
         return
     try:
         await _refresh_cache()
     except Exception as e:
-        logger.warning("admin roles kesh yangilashda xato: %s", e)
+        # Jadval hali yaratilmagan bo'lishi mumkin — bu tez-tez SHU joyga kelmasin.
+        # _loaded_at ni oldga siljitamiz (30s) — har filter chaqirig'ida DB'ga
+        # urinib log to'ldirilmasligi uchun.
+        _loaded_at = time.time() - _CACHE_TTL + 30.0
+        logger.warning("admin_roles kesh yangilashda xato: %s", e)
 
 
 def cached_admin_ids() -> set[int]:
@@ -150,7 +159,11 @@ async def add_role(
         session.add(rec)
     await session.commit()
     await session.refresh(rec)
-    await _refresh_cache()
+    logger.info("admin_roles: rol yozildi tid=%s role=%s added_by=%s", tid, role, added_by)
+    try:
+        await _refresh_cache()
+    except Exception as e:
+        logger.warning("admin_roles: yozildi lekin kesh yangilanmadi: %s", e)
     return rec
 
 
@@ -161,5 +174,9 @@ async def remove_role(session: AsyncSession, telegram_id: int) -> bool:
         return False
     await session.delete(rec)
     await session.commit()
-    await _refresh_cache()
+    logger.info("admin_roles: rol o'chirildi tid=%s", int(telegram_id))
+    try:
+        await _refresh_cache()
+    except Exception as e:
+        logger.warning("admin_roles: o'chirildi lekin kesh yangilanmadi: %s", e)
     return True

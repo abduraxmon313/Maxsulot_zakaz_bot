@@ -85,6 +85,26 @@ NEW_INDEXES = [
     "CREATE INDEX IF NOT EXISTS ix_orders_user_created ON orders (user_id, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_order_items_order ON order_items (order_id)",
     "CREATE INDEX IF NOT EXISTS ix_users_telegram ON users (telegram_id)",
+    "CREATE INDEX IF NOT EXISTS ix_admin_roles_role ON admin_roles (role)",
+]
+
+# admin_roles jadvali `Base.metadata.create_all` orqali yaratiladi, LEKIN eski
+# DB'larda (yangi model kod deploydan oldin ishga tushirilgan) yoki har qanday
+# yumshoq holatda uni majburiy yaratib qo'yamiz — bu idempotent va xavfsiz.
+FORCE_TABLES = [
+    (
+        "admin_roles",
+        """
+        CREATE TABLE IF NOT EXISTS admin_roles (
+            telegram_id BIGINT PRIMARY KEY,
+            role VARCHAR(16) NOT NULL,
+            full_name VARCHAR(255) NOT NULL DEFAULT '',
+            username VARCHAR(255),
+            added_by BIGINT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+    ),
 ]
 
 
@@ -99,6 +119,13 @@ async def _run_migrations(conn):
             await conn.execute(text(f'ALTER TABLE orders ADD COLUMN IF NOT EXISTS {col} {ddl}'))
         except Exception as e:
             logger.warning(f"Migration skip orders.{col}: {e}")
+    # Majburiy jadvallar (create_all ishlashiga qo'shimcha himoya).
+    for name, ddl in FORCE_TABLES:
+        try:
+            await conn.execute(text(ddl))
+            logger.info("Migration: %s jadvali tayyor (IF NOT EXISTS)", name)
+        except Exception as e:
+            logger.warning("Migration skip table %s: %s", name, e)
     for ddl in NEW_INDEXES:
         try:
             await conn.execute(text(ddl))
