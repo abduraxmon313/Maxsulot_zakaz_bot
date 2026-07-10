@@ -313,10 +313,14 @@ function openCheckout() {
   };
   segD.querySelectorAll('button').forEach(b => b.onclick = () => setType(b.dataset.v));
 
+  // Xarita HOLATIGA qarab UI. Qaror bir marta chiqariladi (settled) — shu sabab
+  // xarita ko'ringandan keyin note chiqib qolmaydi (yoki aksincha).
+  let _mapSettled = false;
   // Xarita yuklanmasa: xaritani yashiramiz, LEKIN yetkazib berishni bloklamaymiz —
   // mijoz manzilni matnda yozadi yoki «Olib ketish»ni tanlaydi.
   const onMapFailed = () => {
     State._mapOk = false;
+    const ld = el('mapLoading'); if (ld) ld.style.display = 'none';
     const wrap = document.querySelector('.map-wrap'); if (wrap) wrap.style.display = 'none';
     const hint = document.querySelector('.map-hint'); if (hint) hint.style.display = 'none';
     const note = el('mapNote'); if (note) { note.hidden = false; applyIcons(note); }
@@ -324,10 +328,18 @@ function openCheckout() {
   const onMapOk = () => {
     State._mapOk = true;
     const ld = el('mapLoading'); if (ld) ld.style.display = 'none';
-    // Agar avvalroq ogohlantirish ko'rinib qolgan bo'lsa — uni yashirib, xaritani qaytaramiz.
+    // Xarita chizildi — har qanday ogohlantirishni yashiramiz, xaritani ko'rsatamiz.
     const note = el('mapNote'); if (note) note.hidden = true;
     const wrap = document.querySelector('.map-wrap'); if (wrap) wrap.style.display = '';
     const hint = document.querySelector('.map-hint'); if (hint) hint.style.display = '';
+  };
+  const settleMap = (ok) => { if (_mapSettled) return; _mapSettled = true; ok ? onMapOk() : onMapFailed(); };
+  // Xarita HAQIQATAN chizilganini tekshiradi: obyekt bor va Yandex konteynerga
+  // DOM element(lar) qo'shgan. Shu tekshiruv tufayli "xarita bor, lekin note chiqyapti"
+  // holati yuz bermaydi — note faqat xarita yo'q bo'lsa chiqadi.
+  const mapRendered = () => {
+    const node = el('mapEl');
+    return !!(State._map && node && node.children && node.children.length > 0);
   };
 
   applyIcons(el('checkoutContent'));
@@ -336,23 +348,27 @@ function openCheckout() {
   el('submitOrder').onclick = () => submitOrder(deliveryType);
   openSheet('sheetCheckout');
 
-  if (!hasMap) { onMapFailed(); return; }
+  if (!hasMap) { settleMap(false); return; }
 
   const locBtn = el('locBtn'); if (locBtn) locBtn.onclick = () => locateMeYandex(locBtn);
   loadYandexMaps()
     .then(() => {
-      // Xarita konteyneri tayyor bo'lishi uchun bir necha marta urinamiz (0.4s oralab).
-      // Faqat hamma urinish muvaffaqiyatsiz bo'lgandagina ogohlantirish chiqadi.
+      // Konteyner tayyor bo'lguncha bir necha marta urinamiz (0.4s oralab).
+      // Ogohlantirish FAQAT barcha urinishlardan keyin ham xarita chizilmagan bo'lsa chiqadi.
       const tryInit = (attempt) => {
-        try { initAddressMap(el('mapEl')); } catch (e) { console.error('map init', e); }
-        if (State._map) { onMapOk(); return; }
-        if (attempt < 3) { setTimeout(() => tryInit(attempt + 1), 400); return; }
-        console.warn('Yandex xarita init muvaffaqiyatsiz (barcha urinishlar)');
-        onMapFailed();
+        if (_mapSettled) return;
+        const node = el('mapEl');
+        if (node && !State._map) {
+          try { initAddressMap(node); } catch (e) { console.error('map init', e); }
+        }
+        if (mapRendered()) { settleMap(true); return; }
+        if (attempt < 5) { setTimeout(() => tryInit(attempt + 1), 400); return; }
+        console.warn('Yandex xarita chizilmadi (barcha urinishlar tugadi)');
+        settleMap(false);
       };
-      requestAnimationFrame(() => setTimeout(() => tryInit(0), 120));
+      requestAnimationFrame(() => setTimeout(() => tryInit(0), 100));
     })
-    .catch((e) => { console.warn('Yandex xarita yuklanmadi:', e && e.message); onMapFailed(); });
+    .catch((e) => { console.warn('Yandex xarita yuklanmadi:', e && e.message); settleMap(false); });
 }
 function renderTimeSlots() {
   const wrap = el('timeSlots'); if (!wrap) return;
@@ -522,6 +538,41 @@ function setShopLogo() {
   }
 }
 
+/* Do'kon holati bannerini joriy is_open bo'yicha yangilaydi.
+   is_open === false BO'LGANDAGINA "Do'kon hozircha yopiq" ko'rinadi. Ochiq bo'lsa
+   (yoki holat noma'lum bo'lsa) banner butunlay yashiriladi. Manba — /api/config →
+   is_shop_open(), ya'ni superadmin "Do'kon holati" tugmasidagi natija bilan bir xil. */
+function applyShopStatus() {
+  const cb = el('closedBanner');
+  if (!cb) return;
+  const closed = !!(State.config && State.config.is_open === false);
+  if (closed) {
+    cb.hidden = false;
+    const lbl = cb.querySelector('span:last-child');
+    if (lbl) lbl.textContent = L('closed');
+    applyIcons(cb);
+  } else {
+    cb.hidden = true;
+  }
+}
+
+/* Mini App qayta faollashganda (foydalanuvchi botga o'tib qaytганда yoki oynani
+   qayta ochganda) do'kon holatini serverdan yangilaymiz — shunda do'kon ochilgan
+   bo'lsa eski "yopiq" banner darhol yo'qoladi (va aksincha). */
+let _statusRefreshT = null;
+async function refreshShopStatus() {
+  clearTimeout(_statusRefreshT);
+  _statusRefreshT = setTimeout(async () => {
+    try {
+      const cfg = await api('/config');
+      if (cfg && typeof cfg === 'object') {
+        State.config = Object.assign({}, State.config, cfg);
+        applyShopStatus();
+      }
+    } catch (e) { /* jim: tarmoq xatosi banner holatini o'zgartirmaydi */ }
+  }, 150);
+}
+
 function showAuthBanner() {
   if (el('authBanner')) return;
   const b = document.createElement('div');
@@ -547,7 +598,9 @@ async function init() {
   el('shopStatus').textContent = L('online_shop');
   applyTheme();
   setShopLogo();
-  if (State.config.is_open === false) { const cb = el('closedBanner'); cb.hidden = false; cb.querySelector('span:last-child').textContent = L('closed'); applyIcons(cb); }
+  // Do'kon holati bannerini ko'rsatish/yashirish (server is_open bo'yicha — bu
+  // superadmin "Do'kon holati" tugmasi bilan bir xil manba: is_shop_open()).
+  applyShopStatus();
   skeletonGrid();
   try { State.categories = await api('/categories'); } catch (e) { State.categories = []; }
   renderCategories();
@@ -566,6 +619,10 @@ function bindEvents() {
   el('searchInput').oninput = (e) => { State.search = e.target.value.trim(); el('searchClear').hidden = !State.search; clearTimeout(searchTimer); searchTimer = setTimeout(loadProducts, 350); };
   el('searchClear').onclick = () => { el('searchInput').value = ''; State.search = ''; el('searchClear').hidden = true; loadProducts(); };
   if (tg && tg.BackButton) tg.BackButton.onClick(closeSheets);
+  // Do'kon holatini jonli ushlab turish: oyna qayta ko'ringanda config yangilanadi.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshShopStatus(); });
+  window.addEventListener('focus', refreshShopStatus);
+  window.addEventListener('pageshow', refreshShopStatus);
 }
 
 bindEvents();
