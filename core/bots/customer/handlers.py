@@ -112,11 +112,17 @@ async def handle_menu(message: Message, session: AsyncSession):
         phone = await settings_service.get("phone", "")
         hours = await settings_service.get("working_hours", "")
         shop = await settings_service.get("shop_name", "")
+        admin_contact = (await settings_service.get("admin_contact", "")).strip()
         parts = [f"🏪 <b>{shop}</b>"]
         if phone:
             parts.append(f"☎️ {phone}")
         if hours:
             parts.append(f"🕒 {hours}")
+        # Admin bilan bog'lanish (masalan pul qaytarish yoki savol uchun).
+        # Do'kon egasi Superadmin sozlamalari ichida ko'rsatgan username.
+        if admin_contact:
+            parts.append("")
+            parts.append(f"{t('contact_admin_title', lang)}: {admin_contact}")
         await message.answer("\n".join(parts) or t("btn_contact", lang))
         return
 

@@ -148,4 +148,8 @@ DEFAULT_SETTINGS = {
     "is_open": "1",                # 1 = ochiq, 0 = yopiq (buyurtma qabul qilinmaydi)
     "shop_image": "",              # Do'kon logotipi/rasmi (Media id) — Mini App headerida ko'rinadi
     "primary_color": "#7A573F",    # Mini App asosiy rangi (issiq jigarrang — brend)
+    # Mijozlar admin bilan bog'lanishi uchun ko'rsatiladigan Telegram username
+    # (masalan @username). Buyurtma bekor qilinganida to'lovni qaytarish uchun
+    # ham shu manzil mijozga yuboriladi. Bo'sh bo'lsa oddiy fallback ishlatiladi.
+    "admin_contact": "",
 }

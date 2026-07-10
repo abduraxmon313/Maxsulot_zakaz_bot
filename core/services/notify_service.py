@@ -59,3 +59,17 @@ async def notify_admins(text: str, reply_markup=None) -> int:
 
 async def notify_admin(admin_id: int, text: str, reply_markup=None) -> bool:
     return await _safe_send(registry.admin_bot, admin_id, text, reply_markup)
+
+
+async def notify_superadmins(text: str, reply_markup=None) -> int:
+    """Super Admin bot orqali BARCHA super adminlarga xabar (ENV + DB).
+
+    Buyurtma bekor qilingani, jiddiy xatoliklar va shu kabi hollarda ishlatiladi.
+    """
+    await admin_service.ensure_loaded()
+    ids = admin_service.all_superadmin_ids()
+    sent = 0
+    for tid in ids:
+        if await _safe_send(registry.superadmin_bot, tid, text, reply_markup):
+            sent += 1
+    return sent

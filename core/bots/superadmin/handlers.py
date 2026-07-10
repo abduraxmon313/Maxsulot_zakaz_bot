@@ -162,6 +162,28 @@ async def save_setting_text(message: Message, state: FSMContext):
             return
         value = digits
 
+    # Admin bilan bog'lanish uchun Telegram username — normalizatsiya:
+    # `@user`, `user`, `https://t.me/user` — hammasini `@user` ga keltiramiz.
+    if key == "admin_contact":
+        raw = value.strip()
+        if raw:
+            for pref in ("https://t.me/", "http://t.me/", "t.me/", "tg://resolve?domain="):
+                if raw.lower().startswith(pref):
+                    raw = raw[len(pref):]
+                    break
+            raw = raw.lstrip("@").strip()
+            # Telegram usernameda faqat lotin harfi, raqam va _.
+            cleaned = "".join(ch for ch in raw if ch.isalnum() or ch == "_")
+            if not cleaned or len(cleaned) < 3:
+                await message.answer(
+                    "❗️ Username noto'g'ri. Misol: <code>@admin_username</code> "
+                    "yoki <code>admin_username</code>."
+                )
+                return
+            value = f"@{cleaned}"
+        else:
+            value = ""
+
     await settings_service.set(key, value)
     await state.clear()
     label = kb.SETTING_LABELS.get(key, key)
@@ -539,10 +561,17 @@ def _role_title(role: str) -> str:
 
 
 def _fmt_role_row(rec) -> str:
-    """Ro'yxat elementi uchun bir qatorli ko'rinish."""
+    """Ro'yxat elementi uchun bir qatorli ko'rinish (rol badges bilan)."""
     who = rec.full_name or ""
     uname = f" · @{rec.username}" if rec.username else ""
-    return f"• <code>{rec.telegram_id}</code>{(' — ' + who) if who else ''}{uname}"
+    # Ikkala flag mavjudligini ko'rsatamiz — foydalanuvchi darhol o'zini
+    # kim (admin/superadmin/ikkalasi) ekanligini ko'radi.
+    badges = ""
+    if getattr(rec, "is_superadmin", False):
+        badges += " 👑"
+    if getattr(rec, "is_admin", False):
+        badges += " 🛡"
+    return f"• <code>{rec.telegram_id}</code>{(' — ' + who) if who else ''}{uname}{badges}"
 
 
 @router.message(F.text == kb.BTN_ROLES)
@@ -706,45 +735,70 @@ async def roles_add_value(message: Message, state: FSMContext, session: AsyncSes
 
 @router.callback_query(F.data.startswith("roles:del:"))
 async def roles_delete_prompt(callback: CallbackQuery, session: AsyncSession):
-    tid = int(callback.data.split(":")[2])
+    # Format: roles:del:<role>:<tid>
+    parts = callback.data.split(":")
+    if len(parts) != 4:
+        await callback.answer("Noma'lum format.", show_alert=True)
+        return
+    role = parts[2]
+    if role not in {"admin", "superadmin"}:
+        await callback.answer("Noma'lum rol.", show_alert=True)
+        return
+    tid = int(parts[3])
     rec = await admin_service.get_role(session, tid)
     if rec is None:
         await callback.answer("Yozuv topilmadi (allaqachon o'chirilgan).", show_alert=True)
         return
     # Foydalanuvchi o'zini o'zi chiqarib yubormasin.
     if tid == callback.from_user.id:
-        await callback.answer(
-            "❗️ O'zingizni chiqarib yuborolmaysiz.",
-            show_alert=True,
-        )
+        await callback.answer("❗️ O'zingizni chiqarib yuborolmaysiz.", show_alert=True)
         return
     name = rec.full_name or (f"@{rec.username}" if rec.username else "")
+    # Boshqa rol qolayotganini eslatib qo'yamiz — foydalanuvchi qo'rqmasin.
+    other_role_note = ""
+    if role == "admin" and rec.is_superadmin:
+        other_role_note = "\n\nℹ️ <b>👑 Super Admin</b> huquqi saqlanib qoladi."
+    elif role == "superadmin" and rec.is_admin:
+        other_role_note = "\n\nℹ️ <b>🛡 Admin</b> huquqi saqlanib qoladi."
     await callback.message.answer(
-        f"❓ <b>{_role_title(rec.role)}</b> huquqidan chiqarasizmi?\n"
-        f"👤 <code>{tid}</code>" + (f" — {name}" if name else ""),
-        reply_markup=kb.roles_confirm_delete_inline(tid),
+        f"❓ <b>{_role_title(role)}</b> huquqidan chiqarasizmi?\n"
+        f"👤 <code>{tid}</code>" + (f" — {name}" if name else "") + other_role_note,
+        reply_markup=kb.roles_confirm_delete_inline(role, tid),
     )
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("roles:delok:"))
 async def roles_delete_do(callback: CallbackQuery, session: AsyncSession):
-    tid = int(callback.data.split(":")[2])
+    # Format: roles:delok:<role>:<tid>
+    parts = callback.data.split(":")
+    if len(parts) != 4:
+        await callback.answer("Noma'lum format.", show_alert=True)
+        return
+    role = parts[2]
+    if role not in {"admin", "superadmin"}:
+        await callback.answer("Noma'lum rol.", show_alert=True)
+        return
+    tid = int(parts[3])
     if tid == callback.from_user.id:
         await callback.answer("❗️ O'zingizni chiqarib yuborolmaysiz.", show_alert=True)
         return
-    ok = await admin_service.remove_role(session, tid)
+    ok = await admin_service.remove_role(session, tid, role=role)
     if ok:
+        # Boshqa rol qolganmi tekshiramiz — foydalanuvchiga aniq xabar beramiz.
+        rec = await admin_service.get_role(session, tid)
+        if rec and (rec.is_admin or rec.is_superadmin):
+            remaining = "👑 Super Admin" if rec.is_superadmin else "🛡 Admin"
+            text = (
+                f"🗑 <code>{tid}</code> ning <b>{_role_title(role)}</b> huquqi olindi.\n"
+                f"ℹ️ Qolgan rol: <b>{remaining}</b>."
+            )
+        else:
+            text = f"🗑 <code>{tid}</code> barcha rollardan chiqarildi."
         try:
-            await callback.message.edit_text(
-                f"🗑 <code>{tid}</code> ro'yxatdan chiqarildi.",
-                reply_markup=kb.roles_menu_inline(),
-            )
+            await callback.message.edit_text(text, reply_markup=kb.roles_menu_inline())
         except Exception:
-            await callback.message.answer(
-                f"🗑 <code>{tid}</code> ro'yxatdan chiqarildi.",
-                reply_markup=kb.roles_menu_inline(),
-            )
+            await callback.message.answer(text, reply_markup=kb.roles_menu_inline())
         await callback.answer("✅ Chiqarildi", show_alert=False)
     else:
         await callback.answer("Yozuv topilmadi.", show_alert=True)
