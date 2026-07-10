@@ -54,11 +54,15 @@ async def _currency() -> str:
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
+    # Kesh birinchi kirishda tayyor bo'lsin — filterlar darhol DB rollarini ko'rsin.
+    await admin_service.ensure_loaded()
     shop = await settings_service.get("shop_name", "Do'kon")
     await message.answer(
         f"👑 <b>Super Admin panel</b>\n🏪 {shop}\n\n"
         "Do'koningizni istalgan biznesga moslang: nom, salom xabari, rasm, valyuta, "
-        "narxlar. Kategoriya va mahsulotlarni shu yerdan qo'shasiz.",
+        "narxlar. Kategoriya va mahsulotlarni shu yerdan qo'shasiz.\n\n"
+        "👥 <i>Adminlar/Superadminlarni boshqarish uchun pastdagi "
+        "«👥 Adminlar boshqaruvi» tugmasidan foydalaning.</i>",
         reply_markup=kb.main_menu(),
     )
 
@@ -664,19 +668,38 @@ async def roles_add_value(message: Message, state: FSMContext, session: AsyncSes
     else:
         note = ""
 
-    rec = await admin_service.add_role(
-        session,
-        telegram_id=tid,
-        role=role,
-        added_by=added_by,
-        full_name=(existing_user.full_name if existing_user else ""),
-        username=(existing_user.username if existing_user else None),
-    )
+    try:
+        rec = await admin_service.add_role(
+            session,
+            telegram_id=tid,
+            role=role,
+            added_by=added_by,
+            full_name=(existing_user.full_name if existing_user else ""),
+            username=(existing_user.username if existing_user else None),
+        )
+    except Exception as e:
+        logger.exception("Rol qo'shishda xato: tid=%s role=%s: %s", tid, role, e)
+        await state.clear()
+        await message.answer(
+            "❗️ Rol qo'shib bo'lmadi — DB tomonida xatolik.\n"
+            f"<code>{e}</code>\n\n"
+            "Iltimos, dokumentlarni tekshirib qayta urinib ko'ring. "
+            "Muammo davom etsa Railway loglariga qarang.",
+            reply_markup=kb.main_menu(),
+        )
+        return
+
     await state.clear()
     who = rec.full_name or ""
+    # DB'da rostdan yozilganini tasdiqlash — session ni yopib, yangi sessiya
+    # bilan qayta o'qib ko'ramiz (foydalanuvchi "yo'q bo'lib qolyabdi" muammosi uchun
+    # aniq isbot). Bu qo'shimcha DB so'rov — lekin bir marta.
+    verify = await admin_service.get_role(session, tid)
+    persisted = "✅ DB'da saqlandi" if verify else "⚠️ DB'da topilmadi (xatolik)"
     await message.answer(
         f"✅ Rol berildi: {_role_title(role)}\n"
-        f"👤 <code>{tid}</code>" + (f" — {who}" if who else "") + note,
+        f"👤 <code>{tid}</code>" + (f" — {who}" if who else "") + note +
+        f"\n\n{persisted}",
         reply_markup=kb.main_menu(),
     )
 

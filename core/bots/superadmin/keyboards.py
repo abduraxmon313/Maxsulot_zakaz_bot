@@ -49,8 +49,8 @@ def main_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BTN_ADD_PRODUCT), KeyboardButton(text=BTN_PRODUCTS)],
             [KeyboardButton(text=BTN_ADD_CATEGORY), KeyboardButton(text=BTN_CATEGORIES)],
             [KeyboardButton(text=BTN_ANALYTICS), KeyboardButton(text=BTN_TOGGLE_OPEN)],
-            [KeyboardButton(text=BTN_SHOP_LOCATION), KeyboardButton(text=BTN_STATUS)],
-            [KeyboardButton(text=BTN_ROLES)],
+            [KeyboardButton(text=BTN_SHOP_LOCATION), KeyboardButton(text=BTN_ROLES)],
+            [KeyboardButton(text=BTN_STATUS)],
         ],
         resize_keyboard=True,
     )
