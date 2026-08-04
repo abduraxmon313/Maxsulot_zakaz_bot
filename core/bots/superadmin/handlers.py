@@ -1002,12 +1002,18 @@ async def category_delete_confirm(callback: CallbackQuery, session: AsyncSession
         await callback.answer("Kategoriya topilmadi.", show_alert=True)
         return
     count = await catalog_service.count_products(session, category_id=cat.id, only_active=False)
+    warn = (
+        f"Unda <b>{count}</b> ta mahsulot bor — <b>mahsulotlar o'chmaydi</b>, "
+        "faqat kategoriyasiz bo'lib qoladi (Mini App'da «Hammasi» ostida ko'rinadi)."
+        if count else "Unda mahsulot yo'q."
+    )
     await _edit(
         callback,
-        f"🗑 <b>{cat.emoji} {esc(cat.name)}</b> kategoriyasini o'chirasizmi?\n\n"
-        f"Unda <b>{count}</b> ta mahsulot bor — mahsulotlar o'chmaydi, faqat "
-        "kategoriyasiz bo'lib qoladi (Mini App'da «Hammasi» ostida ko'rinadi).",
-        kb.confirm_kb(f"cdok:{cid}:{page}", f"cv:{cid}:{page}", "🗑 Ha, o'chirish"),
+        f"🗑 <b>{cat.emoji} {esc(cat.name)}</b> kategoriyasini <b>butunlay "
+        f"o'chirasizmi?</b>\n\n{warn}\n\n"
+        "⚠️ Bu amalni <b>qaytarib bo'lmaydi</b>. Vaqtincha yashirish uchun "
+        "«🔴 Nofaol qilish» tugmasidan foydalaning.",
+        kb.confirm_kb(f"cdok:{cid}:{page}", f"cv:{cid}:{page}", "🗑 Ha, butunlay o'chirish"),
     )
     await callback.answer()
 
@@ -1015,10 +1021,16 @@ async def category_delete_confirm(callback: CallbackQuery, session: AsyncSession
 @router.callback_query(F.data.startswith("cdok:"))
 async def category_delete_do(callback: CallbackQuery, session: AsyncSession):
     _, cid, page = callback.data.split(":")
-    await catalog_service.delete_category(session, int(cid))
+    deleted, moved = await catalog_service.delete_category(session, int(cid))
+    if not deleted:
+        await callback.answer("Kategoriya topilmadi (allaqachon o'chirilgan).", show_alert=True)
+        text, markup = await _categories_page(session, int(page))
+        await _edit(callback, text, markup)
+        return
     text, markup = await _categories_page(session, int(page))
     await _edit(callback, text, markup)
-    await callback.answer("🗑 Nofaol qilindi")
+    note = f"🗑 O'chirildi · {moved} mahsulot kategoriyasiz qoldi" if moved else "🗑 O'chirildi"
+    await callback.answer(note, show_alert=bool(moved))
 
 
 @router.callback_query(F.data == "cat:addc")

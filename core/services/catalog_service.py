@@ -1,7 +1,7 @@
 """Kategoriya va mahsulotlar bilan ishlash."""
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models.banner import Banner
@@ -110,11 +110,40 @@ async def move_category(session: AsyncSession, category_id: int, direction: int)
     return True
 
 
-async def delete_category(session: AsyncSession, category_id: int) -> None:
+async def delete_category(session: AsyncSession, category_id: int) -> tuple[bool, int]:
+    """Kategoriyani BUTUNLAY (qaytarib bo'lmaydigan darajada) o'chiradi.
+
+    Ilgari bu funksiya faqat `is_active = False` qilardi — bu esa \"Faol/Nofaol\"
+    tugmasining aynan o'zi edi, ya'ni \"O'chirish\" hech narsa o'chirmasdi.
+
+    O'chirishdan OLDIN bog'liqliklar tozalanadi:
+      1. Mahsulotlar O'CHIRILMAYDI — ular kategoriyasiz qoladi (`category_id`
+         NULL bo'ladi) va Mini App'da \"Hammasi\" ostida ko'rinishda davom etadi.
+         Aks holda FK cheklovi o'chirishga yo'l bermaydi.
+      2. Shu kategoriyaga ishora qilgan bannerlar havolasiz qoladi — aks holda
+         mijoz bannerni bossa hech nima bo'lmaydi (jim buzilgan havola).
+
+    Qaytaradi: (o'chirildi_mi, kategoriyasiz qolgan mahsulotlar soni).
+    """
     cat = await session.get(Category, category_id)
-    if cat:
-        cat.is_active = False
-        await session.commit()
+    if not cat:
+        return False, 0
+
+    moved = int((await session.execute(
+        update(Product)
+        .where(Product.category_id == category_id)
+        .values(category_id=None)
+    )).rowcount or 0)
+
+    await session.execute(
+        update(Banner)
+        .where(Banner.link_type == "category", Banner.link_value == str(category_id))
+        .values(link_type="none", link_value=None)
+    )
+
+    await session.delete(cat)
+    await session.commit()
+    return True, moved
 
 
 # ── Mahsulotlar ──

@@ -1016,8 +1016,8 @@ function setLang(lang, opts) {
 }
 
 /* Telegram header/fon rangi CSS palitrasi bilan bir xil bo'lishi kerak
-   (--bg = #F6FBF8). DB'dagi eski `primary_color` QO'LLANILMAYDI. */
-const THEME_BG = '#F6FBF8';
+   (--bg = #F5FBF9). DB'dagi eski `primary_color` QO'LLANILMAYDI. */
+const THEME_BG = '#F5FBF9';
 function applyTheme() {
   if (tg) {
     try {
