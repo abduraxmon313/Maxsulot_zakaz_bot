@@ -10,15 +10,37 @@ from core.config import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     # ── Sotuv bot ──
-    "btn_open_shop": {"uz": "🛍 Do'konni ochish", "ru": "🛍 Открыть магазин", "en": "🛍 Open shop"},
-    "btn_my_orders": {"uz": "📦 Buyurtmalarim", "ru": "📦 Мои заказы", "en": "📦 My orders"},
-    "btn_contact": {"uz": "☎️ Aloqa", "ru": "☎️ Контакты", "en": "☎️ Contact"},
+    # Emojilar ATAYLAB tanlangan: biz organik/sog'lom sut mahsulotlari sotamiz.
+    # Umumiy savdo belgilari (🛍 sumka, 📦 karobka, ☎️ eski telefon) o'rniga
+    # brendga mos "tabiiy" belgilar ishlatiladi.
+    "btn_open_shop": {"uz": "🌿 Do'konni ochish", "ru": "🌿 Открыть магазин", "en": "🌿 Open shop"},
+    "btn_my_orders": {"uz": "🧾 Buyurtmalarim", "ru": "🧾 Мои заказы", "en": "🧾 My orders"},
+    "btn_contact": {"uz": "📞 Aloqa", "ru": "📞 Связаться", "en": "📞 Contact"},
     "btn_language": {"uz": "🌐 Til", "ru": "🌐 Язык", "en": "🌐 Language"},
     "btn_shop_address": {"uz": "📍 Do'kon manzili", "ru": "📍 Адрес магазина", "en": "📍 Shop address"},
     "tap_to_open": {
-        "uz": "🛍 Do'kon katalogini ochish uchun quyidagi tugmani bosing 👇",
-        "ru": "🛍 Нажмите кнопку ниже, чтобы открыть каталог магазина 👇",
-        "en": "🛍 Tap the button below to open the shop catalog 👇",
+        "uz": "🌿 Do'kon katalogini ochish uchun quyidagi tugmani bosing 👇",
+        "ru": "🌿 Нажмите кнопку ниже, чтобы открыть каталог магазина 👇",
+        "en": "🌿 Tap the button below to open the shop catalog 👇",
+    },
+    # Til tanlash — /start dagi BIRINCHI qadam. Foydalanuvchi tilini hali
+    # bilmaganimiz uchun matn UCH TILDA birga ko'rsatiladi.
+    "choose_language_first": {
+        "uz": (
+            "🌐 <b>Tilni tanlang</b>\n"
+            "🌐 <b>Выберите язык</b>\n"
+            "🌐 <b>Choose your language</b>"
+        ),
+        "ru": (
+            "🌐 <b>Tilni tanlang</b>\n"
+            "🌐 <b>Выберите язык</b>\n"
+            "🌐 <b>Choose your language</b>"
+        ),
+        "en": (
+            "🌐 <b>Tilni tanlang</b>\n"
+            "🌐 <b>Выберите язык</b>\n"
+            "🌐 <b>Choose your language</b>"
+        ),
     },
     "shop_address_none": {
         "uz": "Do'kon manzili hozircha kiritilmagan.",

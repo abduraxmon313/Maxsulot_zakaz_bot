@@ -41,11 +41,13 @@ def main_menu(lang: str) -> ReplyKeyboardMarkup:
 
 
 def language_inline() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🇺🇿 O'zbek", callback_data="setlang:uz"),
-        InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang:ru"),
-        InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang:en"),
-    ]])
+    """Til tanlash — har bir til ALOHIDA qatorda (telefonda bosish osonroq va
+    bayroq+nom to'liq ko'rinadi)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="setlang:uz")],
+        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang:ru")],
+        [InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang:en")],
+    ])
 
 
 # Onlayn to'lov provayderlari (hozircha tanlansa "to'landi" deb hisoblanadi;

@@ -18,8 +18,14 @@ class Product(Base):
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True, index=True
     )
+    # `name` / `description` — ASOSIY (o'zbek) matn. Tarjimalar ixtiyoriy:
+    # bo'sh bo'lsa Mini App o'zbek variantiga qaytadi (serializers.localized).
     name: Mapped[str] = mapped_column(String(200))
+    name_ru: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    name_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
     description: Mapped[str] = mapped_column(Text, default="")
+    description_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[int] = mapped_column(Integer, default=0)            # so'm
     old_price: Mapped[int | None] = mapped_column(Integer, nullable=True)  # chegirmadan oldingi
     image_file_id: Mapped[str | None] = mapped_column(String(256), nullable=True)

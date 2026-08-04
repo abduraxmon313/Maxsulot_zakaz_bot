@@ -15,7 +15,7 @@ if (tg) { tg.ready(); tg.expand(); try { tg.enableClosingConfirmation(); } catch
 const TASHKENT = { lat: 41.311081, lng: 69.279729 };
 
 const State = {
-  config: null, categories: [], products: [], cart: loadCart(),
+  config: null, categories: [], products: [], cart: loadCart(), favorites: loadFavorites(),
   currentCategory: null, search: '', sort: 'popular',
   lang: localStorage.getItem('lang') || ((tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) || 'uz'),
   view: 'home',
@@ -67,6 +67,7 @@ const ICONS = {
   star: '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
   gift: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v14"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>',
   arrowRight: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+  arrowLeft: '<svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>',
   message: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>',
   flame: '<svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></svg>',
   trendDown: '<svg viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>',
@@ -74,6 +75,8 @@ const ICONS = {
   refresh: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
   map: '<svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>',
   snowflake: '<svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="m17 5-5 3-5-3"/><path d="m17 19-5-3-5 3"/><line x1="3" y1="7.5" x2="21" y2="16.5"/><line x1="3" y1="16.5" x2="21" y2="7.5"/></svg>',
+  // Sevimlilar. `fill` CSS orqali boshqariladi (.fav-badge.on svg { fill: ... }).
+  heart: '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg>',
 };
 
 function applyIcons(root) {
@@ -115,16 +118,10 @@ const I18N = {
   delivery_fee: { uz: 'Yetkazib berish', ru: 'Доставка', en: 'Delivery' },
   paid: { uz: "To'langan", ru: 'Оплачено', en: 'Paid' },
 
-  /* ── Brend / hero (organik sut mahsulotlari) ── */
+  /* ── Mahsulot oynasidagi sifat yorliqlari ── */
   brand_tagline: { uz: 'Fermadan uyingizgacha', ru: 'С фермы до вашего дома', en: 'From the farm to your door' },
-  hero_kicker: { uz: 'Premium organik', ru: 'Премиум органика', en: 'Premium organic' },
-  hero_title: { uz: 'Tabiiy sut mahsulotlari — fermadan to‘g‘ridan-to‘g‘ri', ru: 'Натуральные молочные продукты — прямо с фермы', en: 'Natural dairy — straight from the farm' },
-  hero_text: { uz: 'Har kuni yangi. Konservantlarsiz, sovutilgan holda yetkazamiz.', ru: 'Свежее каждый день. Без консервантов, доставка в холоде.', en: 'Fresh daily. No preservatives, chilled delivery.' },
-  hero_organic: { uz: '100% organik', ru: '100% органика', en: '100% organic' },
-  hero_fresh: { uz: 'Sovutilgan yetkazish', ru: 'Доставка в холоде', en: 'Chilled delivery' },
-  hero_today: { uz: 'Bugun yetkazamiz', ru: 'Доставим сегодня', en: 'Delivered today' },
-  hero_free_from: { uz: 'Bepul yetkazish {sum} dan', ru: 'Бесплатная доставка от {sum}', en: 'Free delivery from {sum}' },
-  organic_hint: { uz: 'Organik mahsulot', ru: 'Органический продукт', en: 'Organic product' },
+  tag_organic: { uz: '100% organik', ru: '100% органика', en: '100% organic' },
+  tag_chilled: { uz: 'Sovutilgan yetkazish', ru: 'Доставка в холоде', en: 'Chilled delivery' },
 
   /* ── Saralash ── */
   sort_popular: { uz: 'Ommabop', ru: 'Популярные', en: 'Popular' },
@@ -134,6 +131,13 @@ const I18N = {
   count_items: { uz: '{n} ta', ru: '{n} шт', en: '{n} items' },
 
   /* ── Savat / bepul yetkazish ── */
+  /* ── Sevimlilar ── */
+  favorites_title: { uz: 'Sevimlilar', ru: 'Избранное', en: 'Favorites' },
+  favorites_sub: { uz: 'Yurakcha bosilgan mahsulotlar', ru: 'Товары, отмеченные сердечком', en: 'Products you hearted' },
+  no_favorites: { uz: "Sevimlilar hali bo'sh", ru: 'В избранном пока пусто', en: 'No favorites yet' },
+  fav_added: { uz: '❤️ Sevimlilarga qo‘shildi', ru: '❤️ Добавлено в избранное', en: '❤️ Added to favorites' },
+  fav_removed: { uz: 'Sevimlilardan olindi', ru: 'Удалено из избранного', en: 'Removed from favorites' },
+
   in_cart: { uz: 'Savatda', ru: 'В корзине', en: 'In cart' },
   view_cart: { uz: "Ko'rish", ru: 'Открыть', en: 'View' },
   free_left: { uz: 'Bepul yetkazishgacha yana {sum}', ru: 'До бесплатной доставки ещё {sum}', en: '{sum} more for free delivery' },
@@ -245,10 +249,78 @@ async function api(path, options = {}) {
   }
   // Kesh-buster: har so'rov noyob bo'lsin (Telegram/brauzer eski javobni bermasin —
   // masalan do'kon holati eski "yopiq" bo'lib qolmasligi uchun).
+  // Til HAR bir so'rovga qo'shiladi — katalog endpointlari mahsulot/kategoriya
+  // nomini shu tilda qaytaradi (tarjima yo'q bo'lsa o'zbekchaga qaytadi).
+  // Boshqa endpointlar bu parametrni e'tiborsiz qoldiradi.
+  url += (url.includes('?') ? '&' : '?') + 'lang=' + encodeURIComponent(State.lang);
   url += (url.includes('?') ? '&' : '?') + '_=' + Date.now();
   const res = await fetch(url, Object.assign({}, options, { headers, cache: 'no-store' }));
   if (!res.ok) { let d = 'Xatolik yuz berdi'; try { d = (await res.json()).detail || d; } catch (e) {} throw new Error(d); }
   return res.json();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SEVIMLILAR — faqat ID lar saqlanadi (localStorage).
+
+   Nomi/narxi saqlanmaydi: sevimlilar sahifasi ochilganda ma'lumot serverdan
+   YANGI holatda olinadi (`/api/products?ids=...`). Shu tufayli narx o'zgarsa
+   yoki mahsulot o'chsa, ro'yxat o'zini avtomatik to'g'rilaydi.
+   ═══════════════════════════════════════════════════════════ */
+function loadFavorites() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('favorites') || '[]');
+    return Array.isArray(raw) ? raw.map(Number).filter(Boolean) : [];
+  } catch (e) { return []; }
+}
+function saveFavorites() {
+  localStorage.setItem('favorites', JSON.stringify(State.favorites));
+  updateFavBadge();
+}
+function isFav(id) { return State.favorites.includes(Number(id)); }
+function toggleFav(id) {
+  id = Number(id);
+  const added = !isFav(id);
+  // Yangi qo'shilgan eng boshiga tushadi (sevimlilar sahifasida yuqorida turadi).
+  State.favorites = added ? [id, ...State.favorites] : State.favorites.filter(x => x !== id);
+  saveFavorites();
+  haptic(added ? 'medium' : 'light');
+  toast(L(added ? 'fav_added' : 'fav_removed'));
+  return added;
+}
+function updateFavBadge() {
+  const b = el('favBadge');
+  if (!b) return;
+  const n = State.favorites.length;
+  if (n > 0) { b.textContent = n; b.hidden = false; } else { b.hidden = true; }
+}
+
+/* Sevimlilar sahifasi — ma'lumot har ochilganda serverdan yangilanadi. */
+async function renderFavorites() {
+  const wrap = el('favProducts'), empty = el('emptyFav');
+  if (!State.favorites.length) {
+    wrap.innerHTML = ''; empty.hidden = false;
+    empty.querySelector('p').textContent = L('no_favorites');
+    applyIcons(empty);
+    return;
+  }
+  empty.hidden = true;
+  wrap.innerHTML = Array.from({ length: Math.min(4, State.favorites.length) })
+    .map(() => `<div class="skeleton"><div class="sk-img"></div><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:85%"></div></div>`).join('');
+  try {
+    const items = await api('/products?ids=' + State.favorites.join(','));
+    // Server o'chirilgan/nofaol mahsulotlarni qaytarmaydi — ularni ro'yxatdan
+    // ham tozalaymiz, aks holda sevimlilar soni haqiqatga mos bo'lmaydi.
+    const alive = items.map(p => p.id);
+    if (alive.length !== State.favorites.length) {
+      State.favorites = State.favorites.filter(id => alive.includes(id));
+      saveFavorites();
+    }
+    if (!items.length) { wrap.innerHTML = ''; empty.hidden = false; applyIcons(empty); return; }
+    State.favProducts = items;
+    wrap.innerHTML = items.map((p, i) => productCard(p, i)).join('');
+    applyIcons(wrap);
+    bindCards(wrap, items);
+  } catch (e) { wrap.innerHTML = ''; toast(e.message); }
 }
 
 /* ── Cart ── */
@@ -268,7 +340,8 @@ function addToCart(p, qty) {
 function changeQty(id, d) { const it = State.cart.find(x => x.id === id); if (!it) return; it.qty += d; if (it.qty <= 0) State.cart = State.cart.filter(x => x.id !== id); saveCart(); haptic('light'); }
 function updateBadge() {
   const c = cartCount();
-  [el('cartBadge'), el('navCartBadge')].forEach(b => { if (!b) return; if (c > 0) { b.textContent = c; b.hidden = false; } else { b.hidden = true; } });
+  const b = el('navCartBadge');
+  if (b) { if (c > 0) { b.textContent = c; b.hidden = false; } else { b.hidden = true; } }
   updateFabCart();
 }
 
@@ -282,31 +355,6 @@ function updateFabCart() {
   if (cnt) cnt.textContent = c;
   if (tot) tot.textContent = money(cartItemsTotal());
   fab.classList.toggle('show', show);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   HERO — do'kon qiymat taklifi + ishonch belgilari
-   ═══════════════════════════════════════════════════════════ */
-function renderHero() {
-  const wrap = el('hero');
-  if (!wrap) return;
-  const c = State.config || {};
-  const chips = [`<span class="hero-chip"><span data-ic="leaf"></span>${L('hero_organic')}</span>`];
-  chips.push(`<span class="hero-chip"><span data-ic="snowflake"></span>${L('hero_fresh')}</span>`);
-  if (c.free_delivery_from > 0) {
-    chips.push(`<span class="hero-chip gold"><span data-ic="gift"></span>${L2('hero_free_from', { sum: money(c.free_delivery_from) })}</span>`);
-  } else {
-    chips.push(`<span class="hero-chip"><span data-ic="zap"></span>${L('hero_today')}</span>`);
-  }
-  wrap.innerHTML = `
-    <div class="hero-inner">
-      <span class="hero-kicker"><span data-ic="sparkles"></span>${L('hero_kicker')}</span>
-      <h2 class="hero-title">${L('hero_title')}</h2>
-      <p class="hero-text">${L('hero_text')}</p>
-      <div class="hero-chips">${chips.join('')}</div>
-    </div>`;
-  wrap.hidden = false;
-  applyIcons(wrap);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -440,21 +488,42 @@ function renderProducts() {
 }
 function productCard(p, i) {
   const disc = p.old_price && p.old_price > p.price ? `<div class="discount-badge">-${Math.round((1 - p.price / p.old_price) * 100)}%</div>` : '';
-  // Organik nishoni — har bir mahsulotda brend ishonchini eslatadi.
-  const organic = `<div class="organic-badge" title="${escAttr(L('organic_hint'))}"><span data-ic="leaf"></span></div>`;
+  // Sevimlilar yurakchasi (avval bu yerda organik yaproq nishoni turardi).
+  const fav = `<button type="button" class="fav-badge ${isFav(p.id) ? 'on' : ''}" data-fav="${p.id}" aria-label="${escAttr(L('favorites_title'))}"><span data-ic="heart"></span></button>`;
   const out = !p.in_stock ? `<div class="out-badge">${L('out_of_stock')}</div>` : '';
   const qty = cartQty(p.id); let action;
   if (!p.in_stock) action = `<button class="add" disabled>${L('out_of_stock')}</button>`;
   else if (qty > 0) action = `<div class="qty-mini" data-id="${p.id}"><button data-act="dec" aria-label="-"><span data-ic="minus"></span></button><span>${qty}</span><button data-act="inc" aria-label="+"><span data-ic="plus"></span></button></div>`;
   else action = `<button class="add" data-add="${p.id}">${L('add')}</button>`;
   const old = p.old_price && p.old_price > p.price ? `<span class="old">${money(p.old_price)}</span>` : '';
-  return `<div class="card stagger-in" style="--i:${i}"><div class="imgwrap" data-open="${p.id}">${disc}${organic}${imgHtml(p.image)}${out}</div><div class="info"><div class="price">${money(p.price)} ${old}</div><div class="pname" data-open="${p.id}">${esc(p.name)}</div>${action}</div></div>`;
+  return `<div class="card stagger-in" style="--i:${i}"><div class="imgwrap" data-open="${p.id}">${disc}${imgHtml(p.image)}${out}</div>${fav}<div class="info"><div class="price">${money(p.price)} ${old}</div><div class="pname" data-open="${p.id}">${esc(p.name)}</div>${action}</div></div>`;
 }
-function bindCards() {
-  const wrap = el('products');
+
+/* Kartalarga hodisalarni bog'laydi. `wrap`/`items` berilmasa — bosh sahifa
+   gridi ishlatiladi (sevimlilar sahifasi ham shu funksiyani qayta ishlatadi). */
+function bindCards(wrap, items) {
+  wrap = wrap || el('products');
+  items = items || State.products;
+  const rerender = () => (wrap === el('products') ? renderProducts() : renderFavorites());
   wrap.querySelectorAll('[data-open]').forEach(c => c.onclick = () => openProduct(Number(c.dataset.open)));
-  wrap.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => { e.stopPropagation(); addToCart(State.products.find(x => x.id === Number(b.dataset.add))); renderProducts(); });
-  wrap.querySelectorAll('.qty-mini').forEach(q => { const id = Number(q.dataset.id); q.querySelector('[data-act="inc"]').onclick = (e) => { e.stopPropagation(); changeQty(id, 1); renderProducts(); }; q.querySelector('[data-act="dec"]').onclick = (e) => { e.stopPropagation(); changeQty(id, -1); renderProducts(); }; });
+  wrap.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    addToCart(items.find(x => x.id === Number(b.dataset.add)));
+    rerender();
+  });
+  wrap.querySelectorAll('[data-fav]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const on = toggleFav(b.dataset.fav);
+    b.classList.toggle('on', on);
+    // Sevimlilar sahifasida yurakchani o'chirish = ro'yxatdan chiqarish,
+    // shuning uchun butun ro'yxat qayta chiziladi.
+    if (wrap !== el('products')) renderFavorites();
+  });
+  wrap.querySelectorAll('.qty-mini').forEach(q => {
+    const id = Number(q.dataset.id);
+    q.querySelector('[data-act="inc"]').onclick = (e) => { e.stopPropagation(); changeQty(id, 1); rerender(); };
+    q.querySelector('[data-act="dec"]').onclick = (e) => { e.stopPropagation(); changeQty(id, -1); rerender(); };
+  });
 }
 
 /* Mahsulot detali — miqdor tanlagich bilan (bir urinishda bir nechta dona). */
@@ -468,10 +537,10 @@ async function openProduct(id) {
     ? `<span class="tag gold"><span data-ic="flame"></span>-${Math.round((1 - p.price / p.old_price) * 100)}%</span>` : '';
   const rateTag = p.rating > 0 ? `<span class="tag gold"><span data-ic="star"></span>${p.rating}</span>` : '';
   el('productContent').innerHTML = `
-    <div class="pd-img">${imgHtml(p.image)}</div>
+    <div class="pd-img">${imgHtml(p.image)}<button type="button" class="fav-badge ${isFav(p.id) ? 'on' : ''}" id="pdFav" aria-label="${escAttr(L('favorites_title'))}"><span data-ic="heart"></span></button></div>
     <div class="pd-tags">
-      <span class="tag"><span data-ic="leaf"></span>${L('hero_organic')}</span>
-      <span class="tag aqua"><span data-ic="snowflake"></span>${L('hero_fresh')}</span>
+      <span class="tag"><span data-ic="leaf"></span>${L('tag_organic')}</span>
+      <span class="tag aqua"><span data-ic="snowflake"></span>${L('tag_chilled')}</span>
       ${discTag}${rateTag}
     </div>
     <div class="pd-name">${esc(p.name)}</div>
@@ -488,6 +557,11 @@ async function openProduct(id) {
     </div>` : ''}
     <button class="btn" id="pdAdd" ${p.in_stock ? '' : 'disabled'}><span data-ic="cart"></span><span id="pdAddLbl">${L('add')} · ${money(p.price * qty)}</span></button>`;
   applyIcons(el('productContent'));
+  el('pdFav').onclick = () => {
+    const on = toggleFav(p.id);
+    el('pdFav').classList.toggle('on', on);
+    renderProducts();
+  };
   if (p.in_stock) {
     const sync = () => {
       el('pdQty').textContent = qty;
@@ -861,11 +935,24 @@ function switchView(view) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.nav === view));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   el('view-' + view).classList.add('active');
+  // Sevimlilar pastdagi navigatsiyada yo'q — yuqoridagi yurakcha tugmasi
+  // faol holatga o'tib, foydalanuvchi qayerda ekanini ko'rsatadi.
+  const favBtn = el('tbFav');
+  if (favBtn) favBtn.classList.toggle('on', view === 'favorites');
   if (view === 'cart') renderCart();
+  if (view === 'favorites') renderFavorites();
   if (view === 'orders') loadOrders();
   if (view === 'profile') renderProfile();
   updateFabCart();
   window.scrollTo(0, 0);
+}
+
+/* Til o'zgarganda katalogni serverdan qayta oladi (nomlar yangi tilda kelsin). */
+async function reloadCatalog() {
+  try { State.categories = await api('/categories'); } catch (e) { /* eski ro'yxat qoladi */ }
+  renderCategories();
+  await loadProducts();
+  if (State.view === 'favorites') renderFavorites();
 }
 
 async function loadProducts() {
@@ -917,12 +1004,12 @@ function setLang(lang, opts) {
   const si = el('searchInput'); if (si) si.placeholder = L('search');
   const pt = el('productsTitle'); if (pt) pt.textContent = L('products');
   const ss = el('shopStatus'); if (ss) ss.textContent = L('brand_tagline');
-  renderHero();
   renderSortbar();
   applyShopStatus(); // "Do'kon yopiq" banner matni ham tilga moslashsin
   updateFabCart();
-  if (State.categories && State.categories.length !== undefined) renderCategories();
-  if (State.products && State.products.length !== undefined) renderProducts();
+  // Mahsulot va kategoriya NOMLARI serverdan tilga qarab keladi, shuning uchun
+  // til o'zgarganda ularni QAYTA YUKLAYMIZ (keshdagi nomlar eski tilda qoladi).
+  if (changed) reloadCatalog();
   if (State.view === 'profile') renderProfile();
   // Botga saqlash (foydalanuvchi profilida) — faqat foydalanuvchi o'zi o'zgartirganda.
   if (changed && !(opts && opts.silent)) persistLangToBot(lang);
@@ -997,8 +1084,7 @@ async function refreshShopStatus() {
       if (cfg && typeof cfg === 'object') {
         State.config = Object.assign({}, State.config, cfg);
         applyShopStatus();
-        renderHero();
-        // Botda til o'zgartirilib WebApp'ga qaytilsa — bu yerda darhol qo'llaymiz.
+              // Botda til o'zgartirilib WebApp'ga qaytilsa — bu yerda darhol qo'llaymiz.
         if (cfg.user_lang && ['uz', 'ru', 'en'].includes(cfg.user_lang) && cfg.user_lang !== State.lang) {
           setLang(cfg.user_lang, { silent: true });
         }
@@ -1037,7 +1123,6 @@ async function init() {
   el('shopStatus').textContent = L('brand_tagline');
   applyTheme();
   setShopLogo();
-  renderHero();
   applyShopStatus();
   renderSortbar();
   skeletonGrid();
@@ -1046,15 +1131,23 @@ async function init() {
   await loadProducts();
   try { renderBanners(await api('/banners')); } catch (e) {}
   updateBadge();
+  updateFavBadge();
   const sp = el('splash'); sp.style.opacity = '0'; setTimeout(() => sp.style.display = 'none', 400);
 }
 
 function bindEvents() {
   document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => { haptic('light'); switchView(n.dataset.nav); });
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
-  el('tbCart').onclick = () => switchView('cart');
+  el('tbFav').onclick = () => {
+    haptic('light');
+    // Yurakchani qayta bosish bosh sahifaga qaytaradi (toggle) — chiqish uchun
+    // pastdagi navigatsiyani izlash shart emas.
+    switchView(State.view === 'favorites' ? 'home' : 'favorites');
+  };
   const fab = el('fabCart'); if (fab) fab.onclick = () => { haptic('medium'); switchView('cart'); };
   const goShop = el('emptyGoShop'); if (goShop) goShop.onclick = () => switchView('home');
+  const favShop = el('favGoShop'); if (favShop) favShop.onclick = () => switchView('home');
+  const favBack = el('favBack'); if (favBack) favBack.onclick = () => { haptic('light'); switchView('home'); };
   let searchTimer;
   el('searchInput').oninput = (e) => { State.search = e.target.value.trim(); el('searchClear').hidden = !State.search; clearTimeout(searchTimer); searchTimer = setTimeout(loadProducts, 350); };
   el('searchClear').onclick = () => { el('searchInput').value = ''; State.search = ''; el('searchClear').hidden = true; loadProducts(); };
