@@ -830,12 +830,16 @@ const TL_STEPS = ['created', 'confirmed', 'preparing', 'on_way', 'delivered'];
 function timelineHtml(status) {
   // Bekor/rad etilgan buyurtmada jarayon chizig'i ma'nosiz — faqat holat ko'rinadi.
   if (status === 'canceled' || status === 'rejected') return '';
-  const norm = status === 'completed' ? 'delivered' : status;
+  // «Yakunlangan» — buyurtma TO'LIQ tugagan, shuning uchun OXIRGI qadam ham
+  // bajarilgan (✓) bo'lishi kerak, "hozir bajarilmoqda" halqasi emas.
+  const finished = status === 'completed';
+  const norm = finished ? 'delivered' : status;
   const cur = TL_STEPS.indexOf(norm);
   if (cur < 0) return '';
   return `<div class="otl">${TL_STEPS.map((s, i) => {
-    const cls = i < cur ? 'done' : (i === cur ? 'current' : '');
-    const inner = i < cur ? '<span data-ic="check"></span>' : '';
+    const done = finished || i < cur;
+    const cls = done ? 'done' : (i === cur ? 'current' : '');
+    const inner = done ? '<span data-ic="check"></span>' : '';
     return `<div class="otl-step ${cls}"><span class="otl-dot">${inner}</span><span class="otl-lbl">${L('tl_' + s)}</span></div>`;
   }).join('')}</div>`;
 }
