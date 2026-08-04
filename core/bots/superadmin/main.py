@@ -33,7 +33,20 @@ async def main():
     dp.callback_query.middleware(DbSessionMiddleware())
     dp.include_router(handlers.router)
 
-    await bot.set_my_commands([BotCommand(command="start", description="Super Admin panel")])
+    # Buyruqlar menyusi (Telegram'dagi «/» tugmasi). Oldin faqat /start bor edi —
+    # shu sabab bo'limlarga faqat reply-tugmalar orqali kirish mumkin edi.
+    await bot.set_my_commands([
+        BotCommand(command="start", description="👑 Super Admin panel"),
+        BotCommand(command="menu", description="🏠 Asosiy menyu"),
+        BotCommand(command="products", description="📦 Mahsulotlar"),
+        BotCommand(command="orders", description="🧾 Buyurtmalar"),
+        BotCommand(command="settings", description="⚙️ Sozlamalar"),
+        BotCommand(command="analytics", description="📊 Analitika"),
+        BotCommand(command="broadcast", description="📣 Ommaviy xabar"),
+        BotCommand(command="status", description="ℹ️ Tizim holati"),
+        BotCommand(command="cancel", description="❌ Amalni bekor qilish"),
+        BotCommand(command="help", description="🆘 Qo'llanma"),
+    ])
     logger.info("🚀 Super Admin bot ishga tushdi!")
 
     try:

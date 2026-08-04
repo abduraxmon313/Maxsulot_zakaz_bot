@@ -14,6 +14,10 @@ class Banner(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     image_file_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # Media.id — bannerlar Super Admin bot orqali yuklanganda rasm baytlari DB'da
+    # saqlanadi (cross-bot file_id muammosi bo'lmasligi uchun). Serializer shu
+    # ustunni birinchi navbatda tekshiradi.
+    image_media_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     # link_type: none | product | category | url
     link_type: Mapped[str] = mapped_column(String(16), default="none")

@@ -130,6 +130,21 @@ def _parse_hours(hours_str: str) -> tuple[int, int] | None:
     return sh * 60 + sm, eh * 60 + em
 
 
+def validate_working_hours(hours_str: str) -> tuple[bool, str]:
+    """Super Admin kiritgan ish vaqtini tekshiradi.
+
+    Qaytaradi: (yaroqli_mi, normallashtirilgan_qiymat). Yaroqsiz bo'lsa
+    (False, "") — bu holda bot foydalanuvchidan qayta so'raydi. Ilgari HAR QANDAY
+    matn saqlanardi va `_parse_hours` jimgina "doim ochiq"ga tushib qolardi —
+    ya'ni do'kon kutilmaganda 24/7 ochiq bo'lib qolardi.
+    """
+    parsed = _parse_hours(hours_str or "")
+    if not parsed:
+        return False, ""
+    start, end = parsed
+    return True, f"{start // 60:02d}:{start % 60:02d} - {end // 60:02d}:{end % 60:02d}"
+
+
 def _within_working_hours(hours_str: str) -> bool:
     """
     Hozirgi O'ZBEKISTON VAQTI (Asia/Tashkent) ish vaqti ichidami?

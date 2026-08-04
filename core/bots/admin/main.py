@@ -33,7 +33,17 @@ async def main():
     dp.callback_query.middleware(DbSessionMiddleware())
     dp.include_router(handlers.router)
 
-    await bot.set_my_commands([BotCommand(command="start", description="Admin panel")])
+    # Buyruqlar menyusi (Telegram'dagi «/» tugmasi). Oldin faqat /start bor edi.
+    await bot.set_my_commands([
+        BotCommand(command="start", description="👨‍💼 Admin panel"),
+        BotCommand(command="new", description="🔥 Faol buyurtmalar"),
+        BotCommand(command="orders", description="🧾 Barcha buyurtmalar"),
+        BotCommand(command="order", description="🔎 Raqam bo'yicha topish: /order 1042"),
+        BotCommand(command="stats", description="📊 Statistika"),
+        BotCommand(command="menu", description="🏠 Asosiy menyu"),
+        BotCommand(command="cancel", description="❌ Amalni bekor qilish"),
+        BotCommand(command="help", description="🆘 Qo'llanma"),
+    ])
     logger.info("🚀 Admin bot ishga tushdi!")
 
     try:

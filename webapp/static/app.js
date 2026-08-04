@@ -1,5 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
-   Maxsulot Zakaz — Mini App (Premium warm). Vanilla JS + Telegram WebApp.
+   ORGANIK DO'KON — Mini App (Telegram WebApp, vanilla JS).
+
+   Biznes: organik sut mahsulotlari yetkazib berish.
+   Palitra: yashil (organiklik) + moviy (yangilik/sovutish) + sariq aksent.
+
    Manzil Yandex xarita orqali tanlanadi, buyurtma /api/orders ga saqlanadi,
    to'lov esa bot ichida (Click/Payme/Uzum/Paylov) amalga oshiriladi.
    ═══════════════════════════════════════════════════════════ */
@@ -12,10 +16,11 @@ const TASHKENT = { lat: 41.311081, lng: 69.279729 };
 
 const State = {
   config: null, categories: [], products: [], cart: loadCart(),
-  currentCategory: null, search: '',
+  currentCategory: null, search: '', sort: 'popular',
   lang: localStorage.getItem('lang') || ((tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) || 'uz'),
   view: 'home',
   _map: null, _pickLat: null, _pickLng: null, _pickAddr: '', _geoT: null, _time: '',
+  _banners: [], _bannerTimer: null, _bannerIdx: 0,
 };
 if (!['uz', 'ru', 'en'].includes(State.lang)) State.lang = 'uz';
 
@@ -50,6 +55,25 @@ const ICONS = {
   pin: '<svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
   locate: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="2.5"/></svg>',
   alert: '<svg viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+
+  /* ── Organik / sut mahsulotlari brendi uchun yangi ikonalar ── */
+  // Yaproq — organiklik belgisi (brend shiori yonida, mahsulot nishonida).
+  leaf: '<svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+  // Sut idishi — «Hammasi» kategoriyasi belgisi (biz sut mahsulotlari sotamiz).
+  milk: '<svg viewBox="0 0 24 24"><path d="M9 2h6"/><path d="M9.5 2v3.1a2 2 0 0 1-.38 1.17L7.6 8.5A3 3 0 0 0 7 10.3V19a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3v-8.7a3 3 0 0 0-.6-1.8l-1.52-2.23A2 2 0 0 1 14.5 5.1V2"/><path d="M7.1 12.5h9.8"/></svg>',
+  sparkles: '<svg viewBox="0 0 24 24"><path d="m12 3 1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3Z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8L19 15Z"/></svg>',
+  shield: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  zap: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  star: '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  gift: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v14"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>',
+  arrowRight: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+  message: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>',
+  flame: '<svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></svg>',
+  trendDown: '<svg viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>',
+  trendUp: '<svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+  map: '<svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>',
+  snowflake: '<svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="m17 5-5 3-5-3"/><path d="m17 19-5-3-5 3"/><line x1="3" y1="7.5" x2="21" y2="16.5"/><line x1="3" y1="16.5" x2="21" y2="7.5"/></svg>',
 };
 
 function applyIcons(root) {
@@ -90,7 +114,52 @@ const I18N = {
   contacts: { uz: 'Aloqa', ru: 'Контакты', en: 'Contacts' },
   delivery_fee: { uz: 'Yetkazib berish', ru: 'Доставка', en: 'Delivery' },
   paid: { uz: "To'langan", ru: 'Оплачено', en: 'Paid' },
-  online_shop: { uz: 'Onlayn do\'kon', ru: 'Онлайн магазин', en: 'Online shop' },
+
+  /* ── Brend / hero (organik sut mahsulotlari) ── */
+  brand_tagline: { uz: 'Fermadan uyingizgacha', ru: 'С фермы до вашего дома', en: 'From the farm to your door' },
+  hero_kicker: { uz: 'Premium organik', ru: 'Премиум органика', en: 'Premium organic' },
+  hero_title: { uz: 'Tabiiy sut mahsulotlari — fermadan to‘g‘ridan-to‘g‘ri', ru: 'Натуральные молочные продукты — прямо с фермы', en: 'Natural dairy — straight from the farm' },
+  hero_text: { uz: 'Har kuni yangi. Konservantlarsiz, sovutilgan holda yetkazamiz.', ru: 'Свежее каждый день. Без консервантов, доставка в холоде.', en: 'Fresh daily. No preservatives, chilled delivery.' },
+  hero_organic: { uz: '100% organik', ru: '100% органика', en: '100% organic' },
+  hero_fresh: { uz: 'Sovutilgan yetkazish', ru: 'Доставка в холоде', en: 'Chilled delivery' },
+  hero_today: { uz: 'Bugun yetkazamiz', ru: 'Доставим сегодня', en: 'Delivered today' },
+  hero_free_from: { uz: 'Bepul yetkazish {sum} dan', ru: 'Бесплатная доставка от {sum}', en: 'Free delivery from {sum}' },
+  organic_hint: { uz: 'Organik mahsulot', ru: 'Органический продукт', en: 'Organic product' },
+
+  /* ── Saralash ── */
+  sort_popular: { uz: 'Ommabop', ru: 'Популярные', en: 'Popular' },
+  sort_new: { uz: 'Yangi', ru: 'Новинки', en: 'New' },
+  sort_cheap: { uz: 'Arzon', ru: 'Дешевле', en: 'Cheapest' },
+  sort_expensive: { uz: 'Qimmat', ru: 'Дороже', en: 'Priciest' },
+  count_items: { uz: '{n} ta', ru: '{n} шт', en: '{n} items' },
+
+  /* ── Savat / bepul yetkazish ── */
+  in_cart: { uz: 'Savatda', ru: 'В корзине', en: 'In cart' },
+  view_cart: { uz: "Ko'rish", ru: 'Открыть', en: 'View' },
+  free_left: { uz: 'Bepul yetkazishgacha yana {sum}', ru: 'До бесплатной доставки ещё {sum}', en: '{sum} more for free delivery' },
+  free_done: { uz: '🎉 Yetkazib berish bepul!', ru: '🎉 Доставка бесплатная!', en: '🎉 Delivery is free!' },
+  qty_label: { uz: 'Miqdor', ru: 'Количество', en: 'Quantity' },
+  added_to_cart: { uz: 'Savatga qo‘shildi', ru: 'Добавлено в корзину', en: 'Added to cart' },
+
+  /* ── Buyurtma jarayoni (timeline) ── */
+  tl_created: { uz: 'Qabul', ru: 'Принят', en: 'Placed' },
+  tl_confirmed: { uz: 'Tasdiq', ru: 'Подтв.', en: 'Confirmed' },
+  tl_preparing: { uz: 'Tayyor', ru: 'Готовим', en: 'Packing' },
+  tl_on_way: { uz: "Yo'lda", ru: 'В пути', en: 'On way' },
+  tl_delivered: { uz: 'Yetkazildi', ru: 'Доставлен', en: 'Delivered' },
+
+  /* ── Profil ── */
+  shop_address: { uz: "Do'kon manzili", ru: 'Адрес магазина', en: 'Shop address' },
+  open_map: { uz: 'Xaritada ochish', ru: 'Открыть на карте', en: 'Open on map' },
+  contact_admin: { uz: 'Operator bilan bog‘lanish', ru: 'Связаться с оператором', en: 'Contact the operator' },
+  working_hours: { uz: 'Ish vaqti', ru: 'Часы работы', en: 'Working hours' },
+  delivery_info: { uz: 'Yetkazib berish', ru: 'Доставка', en: 'Delivery' },
+  free_from_short: { uz: '{sum} dan bepul', ru: 'от {sum} бесплатно', en: 'free from {sum}' },
+  our_promise: { uz: 'Bizning kafolatimiz', ru: 'Наша гарантия', en: 'Our promise' },
+  promise_organic: { uz: 'Sertifikatlangan organik xom ashyo', ru: 'Сертифицированное органическое сырьё', en: 'Certified organic sourcing' },
+  promise_cold: { uz: 'Uzluksiz sovutish zanjiri', ru: 'Непрерывная холодовая цепь', en: 'Unbroken cold chain' },
+  promise_fresh: { uz: 'Har kuni yangi partiya', ru: 'Свежая партия каждый день', en: 'A fresh batch every day' },
+
   closed: { uz: 'Do\'kon hozircha yopiq', ru: 'Магазин закрыт', en: 'Shop is closed' },
   address_label: { uz: 'Yetkazish manzili', ru: 'Адрес доставки', en: 'Delivery address' },
   address_ph: { uz: 'Ko\'cha, uy, mo\'ljal…', ru: 'Улица, дом, ориентир…', en: 'Street, house, landmark…' },
@@ -129,6 +198,12 @@ const ST = {
   canceled: { uz: 'Bekor qilindi', ru: 'Отменён', en: 'Canceled' }, rejected: { uz: 'Rad etildi', ru: 'Отклонён', en: 'Rejected' },
 };
 const L = (k) => (I18N[k] && I18N[k][State.lang]) || (I18N[k] && I18N[k].uz) || k;
+/* Shablonli tarjima: L2('free_left', { sum: '10 000 so‘m' }) */
+function L2(k, vars) {
+  let s = L(k);
+  Object.keys(vars || {}).forEach((key) => { s = s.split('{' + key + '}').join(vars[key]); });
+  return s;
+}
 const el = (id) => document.getElementById(id);
 
 /* ── Helpers ── */
@@ -136,9 +211,28 @@ window.__imgErr = function (img) { const w = img.parentNode; if (w) w.innerHTML 
 function imgHtml(src) { if (src) return `<img src="${src}" alt="" loading="lazy" onerror="window.__imgErr(this)">`; return '<div class="ph"><span data-ic="package"></span></div>'; }
 function money(n) { const cur = State.config ? State.config.currency : "so'm"; return (Number(n) || 0).toLocaleString('ru-RU').replace(/,/g, ' ') + ' ' + cur; }
 function haptic(t) { try { tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(t || 'light'); } catch (e) {} }
+function notifyHaptic(t) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(t || 'success'); } catch (e) {} }
 function toast(msg) { const t = el('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+/* Oy qisqartmalari QO'LDA yozilgan: `toLocaleString('uz-UZ', {month:'short'})`
+   ko'p muhitlarda (ICU/CLDR versiyasiga qarab) «M08» kabi foydasiz natija beradi.
+   Shu sabab uchta til uchun ham aniq jadval ishlatiladi. */
+const MONTHS = {
+  uz: ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'],
+  ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
+/* "2026-08-04T10:22:00" -> "4 avg, 10:22" */
+function shortDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const months = MONTHS[State.lang] || MONTHS.uz;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getDate()} ${months[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 async function api(path, options = {}) {
   const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
@@ -163,42 +257,198 @@ function saveCart() { localStorage.setItem('cart', JSON.stringify(State.cart)); 
 function cartQty(id) { const it = State.cart.find(x => x.id === id); return it ? it.qty : 0; }
 function cartCount() { return State.cart.reduce((s, x) => s + x.qty, 0); }
 function cartItemsTotal() { return State.cart.reduce((s, x) => s + x.price * x.qty, 0); }
-function addToCart(p) { const it = State.cart.find(x => x.id === p.id); if (it) it.qty += 1; else State.cart.push({ id: p.id, name: p.name, price: p.price, image: p.image, qty: 1 }); saveCart(); haptic('light'); }
+function addToCart(p, qty) {
+  if (!p) return;
+  const n = Math.max(1, Number(qty) || 1);
+  const it = State.cart.find(x => x.id === p.id);
+  if (it) it.qty += n;
+  else State.cart.push({ id: p.id, name: p.name, price: p.price, image: p.image, qty: n });
+  saveCart(); haptic('light');
+}
 function changeQty(id, d) { const it = State.cart.find(x => x.id === id); if (!it) return; it.qty += d; if (it.qty <= 0) State.cart = State.cart.filter(x => x.id !== id); saveCart(); haptic('light'); }
 function updateBadge() {
   const c = cartCount();
   [el('cartBadge'), el('navCartBadge')].forEach(b => { if (!b) return; if (c > 0) { b.textContent = c; b.hidden = false; } else { b.hidden = true; } });
+  updateFabCart();
 }
 
-/* ── Banners / Categories / Products ── */
-function renderBanners(banners) {
-  const wrap = el('banners');
-  if (!banners || !banners.length) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'flex';
-  wrap.innerHTML = banners.map(b => `<div class="banner">${b.image ? imgHtml(b.image) : ''}</div>`).join('');
+/* Suzuvchi savat paneli — faqat bosh sahifada va savat bo'sh bo'lmaganda. */
+function updateFabCart() {
+  const fab = el('fabCart');
+  if (!fab) return;
+  const c = cartCount();
+  const show = c > 0 && State.view === 'home';
+  const cnt = el('fabCount'), tot = el('fabTotal');
+  if (cnt) cnt.textContent = c;
+  if (tot) tot.textContent = money(cartItemsTotal());
+  fab.classList.toggle('show', show);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   HERO — do'kon qiymat taklifi + ishonch belgilari
+   ═══════════════════════════════════════════════════════════ */
+function renderHero() {
+  const wrap = el('hero');
+  if (!wrap) return;
+  const c = State.config || {};
+  const chips = [`<span class="hero-chip"><span data-ic="leaf"></span>${L('hero_organic')}</span>`];
+  chips.push(`<span class="hero-chip"><span data-ic="snowflake"></span>${L('hero_fresh')}</span>`);
+  if (c.free_delivery_from > 0) {
+    chips.push(`<span class="hero-chip gold"><span data-ic="gift"></span>${L2('hero_free_from', { sum: money(c.free_delivery_from) })}</span>`);
+  } else {
+    chips.push(`<span class="hero-chip"><span data-ic="zap"></span>${L('hero_today')}</span>`);
+  }
+  wrap.innerHTML = `
+    <div class="hero-inner">
+      <span class="hero-kicker"><span data-ic="sparkles"></span>${L('hero_kicker')}</span>
+      <h2 class="hero-title">${L('hero_title')}</h2>
+      <p class="hero-text">${L('hero_text')}</p>
+      <div class="hero-chips">${chips.join('')}</div>
+    </div>`;
+  wrap.hidden = false;
+  applyIcons(wrap);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BANNERLAR — bosiladigan + nuqta indikator + avto-aylanish
+   ═══════════════════════════════════════════════════════════ */
+function renderBanners(banners) {
+  const wrap = el('banners'), dots = el('bannerDots');
+  State._banners = Array.isArray(banners) ? banners : [];
+  clearInterval(State._bannerTimer);
+  if (!State._banners.length) {
+    wrap.style.display = 'none';
+    if (dots) dots.hidden = true;
+    return;
+  }
+  wrap.style.display = 'flex';
+  wrap.innerHTML = State._banners.map((b, i) => {
+    const tappable = b.link_type && b.link_type !== 'none' && b.link_value ? ' tappable' : '';
+    const body = b.image ? imgHtml(b.image) : '<div class="b-ph"><span data-ic="milk"></span></div>';
+    return `<div class="banner${tappable}" data-bi="${i}">${body}</div>`;
+  }).join('');
+  applyIcons(wrap);
+  wrap.querySelectorAll('.banner.tappable').forEach(node => {
+    node.onclick = () => openBannerLink(State._banners[Number(node.dataset.bi)]);
+  });
+
+  // Nuqta indikator (2+ banner bo'lsa).
+  if (dots) {
+    if (State._banners.length < 2) { dots.hidden = true; }
+    else {
+      dots.hidden = false;
+      dots.innerHTML = State._banners.map((_, i) => `<span class="bd${i === 0 ? ' active' : ''}"></span>`).join('');
+    }
+  }
+  State._bannerIdx = 0;
+  wrap.onscroll = () => {
+    const w = wrap.firstElementChild ? wrap.firstElementChild.offsetWidth + 12 : 1;
+    const idx = Math.round(wrap.scrollLeft / w);
+    if (idx !== State._bannerIdx) { State._bannerIdx = idx; syncBannerDots(); }
+  };
+  // Avto-aylanish — foydalanuvchi diqqatini tortadi, lekin sekin (5s).
+  if (State._banners.length > 1) {
+    State._bannerTimer = setInterval(() => {
+      if (document.hidden || State.view !== 'home') return;
+      State._bannerIdx = (State._bannerIdx + 1) % State._banners.length;
+      const w = wrap.firstElementChild ? wrap.firstElementChild.offsetWidth + 12 : 0;
+      wrap.scrollTo({ left: State._bannerIdx * w, behavior: 'smooth' });
+      syncBannerDots();
+    }, 5000);
+  }
+}
+function syncBannerDots() {
+  const dots = el('bannerDots');
+  if (!dots || dots.hidden) return;
+  dots.querySelectorAll('.bd').forEach((d, i) => d.classList.toggle('active', i === State._bannerIdx));
+}
+/* Banner bosilganda: mahsulot / kategoriya / tashqi havola. */
+function openBannerLink(b) {
+  if (!b || !b.link_value) return;
+  haptic('light');
+  if (b.link_type === 'product') {
+    openProduct(Number(b.link_value));
+  } else if (b.link_type === 'category') {
+    State.currentCategory = Number(b.link_value) || null;
+    renderCategories(); loadProducts();
+    const cw = el('catWrap'); if (cw) cw.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (b.link_type === 'url') {
+    try { if (tg && tg.openLink) tg.openLink(b.link_value); else window.open(b.link_value, '_blank'); } catch (e) {}
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KATEGORIYALAR — «Hammasi» chipi organik SUT ikonasi bilan
+   ═══════════════════════════════════════════════════════════ */
 function renderCategories() {
   const wrap = el('categories');
-  let html = `<button class="cat-chip ${State.currentCategory === null ? 'active' : ''}" data-cat="all"><span class="cc-ic">🛍️</span><span class="lbl">${L('all')}</span></button>`;
-  html += State.categories.map(c => `<button class="cat-chip ${State.currentCategory === c.id ? 'active' : ''}" data-cat="${c.id}">${c.emoji ? `<span class="cc-ic">${esc(c.emoji)}</span>` : ''}<span class="lbl">${esc(c.name)}</span></button>`).join('');
+  // «Hammasi» yonidagi belgi: eski 🛍️ emoji o'rniga sut idishi SVG ikonasi —
+  // biz organik SUT MAHSULOTLARI sotamiz, shu sabab brendga mos.
+  let html = `<button class="cat-chip stagger-chip ${State.currentCategory === null ? 'active' : ''}" style="--i:0" data-cat="all"><span class="cc-ic" data-ic="milk"></span><span class="lbl">${L('all')}</span></button>`;
+  html += State.categories.map((c, i) => {
+    const ic = c.emoji ? `<span class="cc-ic">${esc(c.emoji)}</span>` : '<span class="cc-ic" data-ic="leaf"></span>';
+    return `<button class="cat-chip stagger-chip ${State.currentCategory === c.id ? 'active' : ''}" style="--i:${i + 1}" data-cat="${c.id}">${ic}<span class="lbl">${esc(c.name)}</span></button>`;
+  }).join('');
   wrap.innerHTML = html;
-  wrap.querySelectorAll('.cat-chip').forEach(chip => chip.onclick = () => { const v = chip.dataset.cat; State.currentCategory = v === 'all' ? null : Number(v); renderCategories(); loadProducts(); });
+  applyIcons(wrap);
+  wrap.querySelectorAll('.cat-chip').forEach(chip => chip.onclick = () => {
+    const v = chip.dataset.cat;
+    State.currentCategory = v === 'all' ? null : Number(v);
+    haptic('light');
+    renderCategories(); loadProducts();
+  });
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SARALASH chiplari (backend `sort` parametrini qo'llab-quvvatlaydi)
+   ═══════════════════════════════════════════════════════════ */
+const SORTS = [
+  ['popular', 'sort_popular', 'flame'],
+  ['new', 'sort_new', 'sparkles'],
+  ['cheap', 'sort_cheap', 'trendDown'],
+  ['expensive', 'sort_expensive', 'trendUp'],
+];
+function renderSortbar() {
+  const wrap = el('sortbar');
+  if (!wrap) return;
+  wrap.innerHTML = SORTS.map(([key, lbl, ic]) =>
+    `<button class="sort-chip ${State.sort === key ? 'active' : ''}" data-sort="${key}"><span data-ic="${ic}"></span>${L(lbl)}</button>`
+  ).join('');
+  applyIcons(wrap);
+  wrap.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => {
+    if (State.sort === b.dataset.sort) return;
+    State.sort = b.dataset.sort;
+    haptic('light');
+    renderSortbar(); loadProducts();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAHSULOTLAR
+   ═══════════════════════════════════════════════════════════ */
 function skeletonGrid() { el('products').innerHTML = Array.from({ length: 6 }).map(() => `<div class="skeleton"><div class="sk-img"></div><div class="sk-line" style="width:55%"></div><div class="sk-line" style="width:85%"></div></div>`).join(''); }
 function renderProducts() {
-  const wrap = el('products'), empty = el('emptyProducts');
+  const wrap = el('products'), empty = el('emptyProducts'), cnt = el('productsCount');
+  if (cnt) {
+    if (State.products.length) { cnt.hidden = false; cnt.textContent = L2('count_items', { n: State.products.length }); }
+    else cnt.hidden = true;
+  }
   if (!State.products.length) { wrap.innerHTML = ''; empty.hidden = false; empty.querySelector('p').textContent = L('no_products'); applyIcons(empty); return; }
-  empty.hidden = true; wrap.innerHTML = State.products.map(productCard).join(''); applyIcons(wrap); bindCards();
+  empty.hidden = true;
+  wrap.innerHTML = State.products.map((p, i) => productCard(p, i)).join('');
+  applyIcons(wrap); bindCards();
 }
-function productCard(p) {
+function productCard(p, i) {
   const disc = p.old_price && p.old_price > p.price ? `<div class="discount-badge">-${Math.round((1 - p.price / p.old_price) * 100)}%</div>` : '';
+  // Organik nishoni — har bir mahsulotda brend ishonchini eslatadi.
+  const organic = `<div class="organic-badge" title="${escAttr(L('organic_hint'))}"><span data-ic="leaf"></span></div>`;
   const out = !p.in_stock ? `<div class="out-badge">${L('out_of_stock')}</div>` : '';
   const qty = cartQty(p.id); let action;
   if (!p.in_stock) action = `<button class="add" disabled>${L('out_of_stock')}</button>`;
-  else if (qty > 0) action = `<div class="qty-mini" data-id="${p.id}"><button data-act="dec"><span data-ic="minus"></span></button><span>${qty}</span><button data-act="inc"><span data-ic="plus"></span></button></div>`;
+  else if (qty > 0) action = `<div class="qty-mini" data-id="${p.id}"><button data-act="dec" aria-label="-"><span data-ic="minus"></span></button><span>${qty}</span><button data-act="inc" aria-label="+"><span data-ic="plus"></span></button></div>`;
   else action = `<button class="add" data-add="${p.id}">${L('add')}</button>`;
   const old = p.old_price && p.old_price > p.price ? `<span class="old">${money(p.old_price)}</span>` : '';
-  return `<div class="card"><div class="imgwrap" data-open="${p.id}">${disc}${imgHtml(p.image)}${out}</div><div class="info"><div class="price">${money(p.price)} ${old}</div><div class="pname" data-open="${p.id}">${esc(p.name)}</div>${action}</div></div>`;
+  return `<div class="card stagger-in" style="--i:${i}"><div class="imgwrap" data-open="${p.id}">${disc}${organic}${imgHtml(p.image)}${out}</div><div class="info"><div class="price">${money(p.price)} ${old}</div><div class="pname" data-open="${p.id}">${esc(p.name)}</div>${action}</div></div>`;
 }
 function bindCards() {
   const wrap = el('products');
@@ -206,30 +456,95 @@ function bindCards() {
   wrap.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => { e.stopPropagation(); addToCart(State.products.find(x => x.id === Number(b.dataset.add))); renderProducts(); });
   wrap.querySelectorAll('.qty-mini').forEach(q => { const id = Number(q.dataset.id); q.querySelector('[data-act="inc"]').onclick = (e) => { e.stopPropagation(); changeQty(id, 1); renderProducts(); }; q.querySelector('[data-act="dec"]').onclick = (e) => { e.stopPropagation(); changeQty(id, -1); renderProducts(); }; });
 }
+
+/* Mahsulot detali — miqdor tanlagich bilan (bir urinishda bir nechta dona). */
 async function openProduct(id) {
   let p = State.products.find(x => x.id === id);
   try { p = await api('/products/' + id); } catch (e) {}
   if (!p) return;
+  let qty = Math.max(1, cartQty(p.id) || 1);
   const old = p.old_price && p.old_price > p.price ? `<span class="pd-old">${money(p.old_price)}</span>` : '';
-  el('productContent').innerHTML = `<div class="pd-img">${imgHtml(p.image)}</div><div class="pd-name">${esc(p.name)}</div><div><span class="pd-price">${money(p.price)}</span>${old}</div>${p.description ? `<div class="pd-desc">${esc(p.description)}</div>` : ''}<div class="pd-meta">${p.in_stock ? '✓ ' + L('in_stock') : L('out_of_stock')}</div><button class="btn" id="pdAdd" ${p.in_stock ? '' : 'disabled'}><span data-ic="cart"></span>${L('add')} · ${money(p.price)}</button>`;
+  const discTag = p.old_price && p.old_price > p.price
+    ? `<span class="tag gold"><span data-ic="flame"></span>-${Math.round((1 - p.price / p.old_price) * 100)}%</span>` : '';
+  const rateTag = p.rating > 0 ? `<span class="tag gold"><span data-ic="star"></span>${p.rating}</span>` : '';
+  el('productContent').innerHTML = `
+    <div class="pd-img">${imgHtml(p.image)}</div>
+    <div class="pd-tags">
+      <span class="tag"><span data-ic="leaf"></span>${L('hero_organic')}</span>
+      <span class="tag aqua"><span data-ic="snowflake"></span>${L('hero_fresh')}</span>
+      ${discTag}${rateTag}
+    </div>
+    <div class="pd-name">${esc(p.name)}</div>
+    <div><span class="pd-price">${money(p.price)}</span>${old}</div>
+    ${p.description ? `<div class="pd-desc">${esc(p.description)}</div>` : ''}
+    <div class="pd-meta ${p.in_stock ? '' : 'out'}"><span data-ic="${p.in_stock ? 'checkCircle' : 'alert'}"></span>${p.in_stock ? L('in_stock') : L('out_of_stock')}</div>
+    ${p.in_stock ? `<div class="stepper">
+      <span class="st-lbl">${L('qty_label')}</span>
+      <span class="st-ctl">
+        <button type="button" id="pdMinus" aria-label="-"><span data-ic="minus"></span></button>
+        <span class="st-val" id="pdQty">${qty}</span>
+        <button type="button" id="pdPlus" aria-label="+"><span data-ic="plus"></span></button>
+      </span>
+    </div>` : ''}
+    <button class="btn" id="pdAdd" ${p.in_stock ? '' : 'disabled'}><span data-ic="cart"></span><span id="pdAddLbl">${L('add')} · ${money(p.price * qty)}</span></button>`;
   applyIcons(el('productContent'));
-  if (p.in_stock) el('pdAdd').onclick = () => { addToCart(p); closeSheets(); renderProducts(); toast(L('add') + ' ✓'); };
+  if (p.in_stock) {
+    const sync = () => {
+      el('pdQty').textContent = qty;
+      el('pdAddLbl').textContent = `${L('add')} · ${money(p.price * qty)}`;
+      const minus = el('pdMinus'); if (minus) minus.disabled = qty <= 1;
+    };
+    el('pdMinus').onclick = () => { if (qty > 1) { qty -= 1; haptic('light'); sync(); } };
+    el('pdPlus').onclick = () => { if (!p.stock || qty < p.stock) { qty += 1; haptic('light'); sync(); } else toast(L('out_of_stock')); };
+    sync();
+    el('pdAdd').onclick = () => {
+      // Detal oynasidagi miqdor SAVATDAGI joriy sonni ALMASHTIRADI (qo'shmaydi) —
+      // stepper savatdagi sonni ko'rsatib turgani uchun mantiqiy shu.
+      State.cart = State.cart.filter(x => x.id !== p.id);
+      addToCart(p, qty);
+      closeSheets(); renderProducts(); notifyHaptic('success');
+      toast(`${L('added_to_cart')} · ${qty}`);
+    };
+  }
   openSheet('sheetProduct');
 }
 
-/* ── Cart view ── */
+/* ═══════════════════════════════════════════════════════════
+   SAVAT — bepul yetkazish progressi bilan
+   ═══════════════════════════════════════════════════════════ */
 function renderCart() {
-  const wrap = el('cartItems'), empty = el('cartEmpty'), footer = el('cartFooter');
-  if (!State.cart.length) { wrap.innerHTML = ''; empty.hidden = false; empty.querySelector('p').textContent = L('cart_empty'); applyIcons(empty); footer.innerHTML = ''; return; }
+  const wrap = el('cartItems'), empty = el('cartEmpty'), footer = el('cartFooter'), sub = el('cartSub');
+  if (!State.cart.length) {
+    wrap.innerHTML = ''; empty.hidden = false; empty.querySelector('p').textContent = L('cart_empty');
+    applyIcons(empty); footer.innerHTML = '';
+    if (sub) sub.hidden = true;
+    return;
+  }
   empty.hidden = true;
-  wrap.innerHTML = State.cart.map(it => `<div class="cart-item"><div class="ci-img">${imgHtml(it.image)}</div><div class="ci-info"><div class="ci-name">${esc(it.name)}</div><div class="ci-price">${money(it.price)}</div></div><div class="qty"><button data-dec="${it.id}"><span data-ic="minus"></span></button><span>${it.qty}</span><button data-inc="${it.id}"><span data-ic="plus"></span></button></div></div>`).join('');
+  if (sub) { sub.hidden = false; sub.textContent = L2('count_items', { n: cartCount() }); }
+  wrap.innerHTML = State.cart.map((it, i) => `<div class="cart-item" style="--i:${i}"><div class="ci-img">${imgHtml(it.image)}</div><div class="ci-info"><div class="ci-name">${esc(it.name)}</div><div class="ci-price">${money(it.price)}</div></div><div class="qty"><button data-dec="${it.id}" aria-label="-"><span data-ic="${it.qty > 1 ? 'minus' : 'trash'}"></span></button><span>${it.qty}</span><button data-inc="${it.id}" aria-label="+"><span data-ic="plus"></span></button></div></div>`).join('');
   applyIcons(wrap);
   wrap.querySelectorAll('[data-inc]').forEach(b => b.onclick = () => { changeQty(Number(b.dataset.inc), 1); renderCart(); renderProducts(); });
   wrap.querySelectorAll('[data-dec]').forEach(b => b.onclick = () => { changeQty(Number(b.dataset.dec), -1); renderCart(); renderProducts(); });
-  const itemsTotal = cartItemsTotal(), min = State.config.min_order_amount || 0, belowMin = min > 0 && itemsTotal < min;
-  footer.innerHTML = `<div class="cf-inner"><div class="sum-row"><span>${L('items_total')}</span><span>${money(itemsTotal)}</span></div><div class="sum-row total"><span>${L('total')}</span><span>${money(itemsTotal)}</span></div>${belowMin ? `<div class="min-warn">${L('min_order')}: ${money(min)}</div>` : ''}<button class="btn" id="goCheckout" ${belowMin ? 'disabled' : ''}><span data-ic="bag"></span>${L('checkout')}</button></div>`;
+
+  const c = State.config || {};
+  const itemsTotal = cartItemsTotal(), min = c.min_order_amount || 0, belowMin = min > 0 && itemsTotal < min;
+  footer.innerHTML = `<div class="cf-inner">${freeProgressHtml(itemsTotal)}<div class="sum-row"><span>${L('items_total')}</span><b>${money(itemsTotal)}</b></div><div class="sum-row total"><span>${L('total')}</span><span>${money(itemsTotal)}</span></div>${belowMin ? `<div class="min-warn">${L('min_order')}: ${money(min)}</div>` : ''}<button class="btn" id="goCheckout" ${belowMin ? 'disabled' : ''}><span data-ic="bag"></span>${L('checkout')}</button></div>`;
   applyIcons(footer);
   if (!belowMin) el('goCheckout').onclick = openCheckout;
+}
+/* «Bepul yetkazishgacha yana X so'm» — mijozni ko'proq xarid qilishga undaydi. */
+function freeProgressHtml(itemsTotal) {
+  const c = State.config || {};
+  const from = c.free_delivery_from || 0;
+  if (!from) return '';
+  const done = itemsTotal >= from;
+  const pct = Math.min(100, Math.round((itemsTotal / from) * 100));
+  const label = done ? L('free_done') : L2('free_left', { sum: money(from - itemsTotal) });
+  return `<div class="free-prog ${done ? 'done' : ''}">
+    <div class="fp-top"><span data-ic="${done ? 'gift' : 'truck'}"></span><span>${label}</span></div>
+    <div class="fp-bar"><div class="fp-fill" style="width:${pct}%"></div></div>
+  </div>`;
 }
 
 /* ── Yandex Maps loader ── */
@@ -276,7 +591,6 @@ function reverseGeocodeCenter() {
 }
 function locateMeYandex(btn) {
   if (!navigator.geolocation) { toast(L('loc_fail')); return; }
-  const orig = btn ? btn.innerHTML : '';
   if (btn) { btn.classList.add('busy'); }
   navigator.geolocation.getCurrentPosition(
     (pos) => { if (State._map) { State._map.setCenter([pos.coords.latitude, pos.coords.longitude], 17); haptic('medium'); } if (btn) btn.classList.remove('busy'); },
@@ -286,7 +600,7 @@ function locateMeYandex(btn) {
 }
 
 /* ── Checkout: yetkazish turi + Yandex xarita manzil + saqlab to'lovga o'tish ──
-   Xarita yuklanmasa → ogohlantirish + faqat «Olib ketish» (yetkazib berish bloklanadi). */
+   Xarita yuklanmasa → ogohlantirish + manzilni matnda kiritish mumkin. */
 function openCheckout() {
   const hasMap = !!(State.config && State.config.maps_api_key);
   State._mapOk = hasMap;         // optimistik; xarita yuklanmasa false bo'ladi
@@ -320,7 +634,7 @@ function openCheckout() {
     addrBlock.style.display = (v === 'delivery') ? '' : 'none';
     renderSummary(v);
   };
-  segD.querySelectorAll('button').forEach(b => b.onclick = () => setType(b.dataset.v));
+  segD.querySelectorAll('button').forEach(b => b.onclick = () => { haptic('light'); setType(b.dataset.v); });
 
   // Xarita HOLATIGA qarab UI. Qaror bir marta chiqariladi (settled) — shu sabab
   // xarita ko'ringandan keyin note chiqib qolmaydi (yoki aksincha).
@@ -394,7 +708,7 @@ function renderTimeSlots() {
 function deliveryFeeFor(t) { const c = State.config; if (!c) return 0; let f = c.delivery_fee || 0; if (c.free_delivery_from && t >= c.free_delivery_from) f = 0; return f; }
 function renderSummary(deliveryType) {
   const itemsTotal = cartItemsTotal(), fee = deliveryType === 'delivery' ? deliveryFeeFor(itemsTotal) : 0;
-  el('ckSummary').innerHTML = `<div class="sum-row"><span>${L('items_total')}</span><span>${money(itemsTotal)}</span></div>${deliveryType === 'delivery' ? `<div class="sum-row"><span>${L('delivery_fee')}</span><span>${fee ? money(fee) : L('free')}</span></div>` : ''}<div class="sum-row total"><span>${L('total')}</span><span>${money(itemsTotal + fee)}</span></div>`;
+  el('ckSummary').innerHTML = `<div class="sum-row"><span>${L('items_total')}</span><b>${money(itemsTotal)}</b></div>${deliveryType === 'delivery' ? `<div class="sum-row"><span>${L('delivery_fee')}</span><b class="${fee ? '' : 'sum-free'}">${fee ? money(fee) : L('free')}</b></div>` : ''}<div class="sum-row total"><span>${L('total')}</span><span>${money(itemsTotal + fee)}</span></div>`;
 }
 function submitOrder(deliveryType) {
   if (!State.cart.length) { toast(L('cart_empty')); return; }
@@ -416,8 +730,8 @@ function submitOrder(deliveryType) {
   if (btn) { btn.disabled = true; btn.textContent = L('saving'); }
   const body = { items: State.cart.map(x => ({ product_id: x.id, qty: x.qty })), delivery_type: deliveryType, address, lat, lng, delivery_time: deliveryTime, note };
   api('/orders', { method: 'POST', body: JSON.stringify(body) })
-    .then((order) => { State.cart = []; saveCart(); renderProducts(); haptic('medium'); showOrderSuccess(order); })
-    .catch((e) => { toast('❌ ' + e.message); if (btn) { btn.disabled = false; btn.innerHTML = `<span data-ic="bag"></span>${L('save_and_pay')}`; applyIcons(btn); } });
+    .then((order) => { State.cart = []; saveCart(); renderProducts(); notifyHaptic('success'); showOrderSuccess(order); })
+    .catch((e) => { toast('❌ ' + e.message); notifyHaptic('error'); if (btn) { btn.disabled = false; btn.innerHTML = `<span data-ic="bag"></span>${L('save_and_pay')}`; applyIcons(btn); } });
 }
 function showOrderSuccess(order) {
   try { if (State._map && State._map.destroy) { State._map.destroy(); } } catch (e) {}
@@ -428,50 +742,108 @@ function showOrderSuccess(order) {
       <h3>${L('order_saved_title')}</h3>
       <p class="os-num"># ${order.order_number} · ${money(order.grand_total)}</p>
       <div class="os-hint">${L('go_to_bot')}</div>
-      <button class="btn" id="osOpenBot"><span data-ic="bag"></span>${L('open_bot')}</button>
+      <button class="btn" id="osOpenBot"><span data-ic="arrowRight"></span>${L('open_bot')}</button>
     </div>`;
   applyIcons(el('checkoutContent'));
   el('osOpenBot').onclick = () => { if (tg && tg.close) tg.close(); else { closeSheets(); switchView('orders'); } };
   updateBadge();
 }
 
-/* ── Orders ── */
+/* ═══════════════════════════════════════════════════════════
+   BUYURTMALAR — holat chizig'i (timeline) bilan
+   ═══════════════════════════════════════════════════════════ */
+const TL_STEPS = ['created', 'confirmed', 'preparing', 'on_way', 'delivered'];
+function timelineHtml(status) {
+  // Bekor/rad etilgan buyurtmada jarayon chizig'i ma'nosiz — faqat holat ko'rinadi.
+  if (status === 'canceled' || status === 'rejected') return '';
+  const norm = status === 'completed' ? 'delivered' : status;
+  const cur = TL_STEPS.indexOf(norm);
+  if (cur < 0) return '';
+  return `<div class="otl">${TL_STEPS.map((s, i) => {
+    const cls = i < cur ? 'done' : (i === cur ? 'current' : '');
+    const inner = i < cur ? '<span data-ic="check"></span>' : '';
+    return `<div class="otl-step ${cls}"><span class="otl-dot">${inner}</span><span class="otl-lbl">${L('tl_' + s)}</span></div>`;
+  }).join('')}</div>`;
+}
 async function loadOrders() {
   const wrap = el('ordersList'), empty = el('emptyOrders');
-  wrap.innerHTML = Array.from({ length: 3 }).map(() => `<div class="skeleton" style="height:96px;border-radius:18px"></div>`).join('');
+  wrap.innerHTML = Array.from({ length: 3 }).map(() => `<div class="skeleton" style="height:128px;border-radius:24px"></div>`).join('');
   try {
     const orders = await api('/orders');
     if (!orders.length) { wrap.innerHTML = ''; empty.hidden = false; empty.querySelector('p').textContent = L('no_orders'); applyIcons(empty); return; }
     empty.hidden = true;
-    wrap.innerHTML = orders.map(o => {
+    wrap.innerHTML = orders.map((o, i) => {
       const stTxt = (ST[o.status] && ST[o.status][State.lang]) || o.status;
-      const items = o.items.map(i => `${esc(i.name)} ×${i.qty}`).join(', ');
+      const items = o.items.map(it => `${esc(it.name)} ×${it.qty}`).join(', ');
       const paid = o.is_paid ? `<span class="order-paid"><span data-ic="check"></span>${L('paid')}</span>` : '';
-      return `<div class="order-card"><div class="order-head"><span class="order-num"># ${o.order_number}</span><span class="order-status st-${o.status}">${stTxt}</span></div><div class="order-items-mini">${items}</div><div class="order-total">${money(o.grand_total)}${paid}</div></div>`;
+      const when = shortDate(o.created_at);
+      return `<div class="order-card" style="--i:${i}">
+        <div class="order-head">
+          <span><span class="order-num"># ${o.order_number}</span>${when ? `<div class="order-date">${esc(when)}</div>` : ''}</span>
+          <span class="order-status st-${o.status}">${stTxt}</span>
+        </div>
+        ${timelineHtml(o.status)}
+        <div class="order-items-mini">${items}</div>
+        <div class="order-total">${money(o.grand_total)}${paid}</div>
+      </div>`;
     }).join('');
     applyIcons(wrap);
   } catch (e) { wrap.innerHTML = ''; toast(e.message); }
 }
 
-/* ── Profile ── */
+/* ═══════════════════════════════════════════════════════════
+   PROFIL — til, do'kon aloqa ma'lumotlari, manzil, kafolat
+   ═══════════════════════════════════════════════════════════ */
 function renderProfile() {
   const user = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || {};
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Mijoz';
   const initial = (name.trim()[0] || 'M').toUpperCase();
   const c = State.config || {};
   const langs = [['uz', "O'zbek"], ['ru', 'Русский'], ['en', 'English']];
+
+  // Aloqa bloki qatorlari
+  const rows = [];
+  if (c.shop_name) rows.push(`<div class="prof-row"><span class="pr-ic" data-ic="store"></span><div class="pr-text">${esc(c.shop_name)}</div></div>`);
+  if (c.phone) rows.push(`<a class="prof-row link" href="tel:${escAttr(String(c.phone).replace(/\s/g, ''))}"><span class="pr-ic" data-ic="phone"></span><div class="pr-text">${esc(c.phone)}</div><span class="pr-go" data-ic="arrowRight"></span></a>`);
+  if (c.admin_contact) {
+    const uname = String(c.admin_contact).replace(/^@/, '');
+    rows.push(`<button class="prof-row link" data-open-link="https://t.me/${escAttr(uname)}"><span class="pr-ic aqua" data-ic="message"></span><div class="pr-text">${L('contact_admin')}<small>@${esc(uname)}</small></div><span class="pr-go" data-ic="arrowRight"></span></button>`);
+  }
+  if (c.working_hours) rows.push(`<div class="prof-row"><span class="pr-ic" data-ic="clock"></span><div class="pr-text">${L('working_hours')}<small>${esc(c.working_hours)}</small></div></div>`);
+  if (c.shop_lat && c.shop_lng) {
+    const mapUrl = `https://yandex.uz/maps/?pt=${encodeURIComponent(c.shop_lng)},${encodeURIComponent(c.shop_lat)}&z=17&l=map`;
+    rows.push(`<button class="prof-row link" data-open-link="${escAttr(mapUrl)}"><span class="pr-ic aqua" data-ic="map"></span><div class="pr-text">${L('shop_address')}<small>${esc(c.shop_address || L('open_map'))}</small></div><span class="pr-go" data-ic="arrowRight"></span></button>`);
+  }
+
+  // Yetkazib berish shartlari
+  const delivRows = [];
+  delivRows.push(`<div class="prof-row"><span class="pr-ic" data-ic="truck"></span><div class="pr-text">${L('delivery_fee')}<small>${c.delivery_fee ? money(c.delivery_fee) : L('free')}</small></div></div>`);
+  if (c.free_delivery_from > 0) delivRows.push(`<div class="prof-row"><span class="pr-ic gold" data-ic="gift"></span><div class="pr-text">${L('free')}<small>${L2('free_from_short', { sum: money(c.free_delivery_from) })}</small></div></div>`);
+  if (c.min_order_amount > 0) delivRows.push(`<div class="prof-row"><span class="pr-ic" data-ic="bag"></span><div class="pr-text">${L('min_order')}<small>${money(c.min_order_amount)}</small></div></div>`);
+
   el('profileContent').innerHTML = `
     <div class="profile">
-      <div class="prof-card"><div class="prof-head"><div class="prof-avatar">${esc(initial)}</div><div><div class="prof-name">${esc(name)}</div><div class="prof-phone">${user.username ? '@' + esc(user.username) : ''}</div></div></div></div>
-      <div class="prof-card"><div class="prof-section-title">${L('language')}</div><div class="lang-row">${langs.map(l => `<button class="lang-pick ${State.lang === l[0] ? 'active' : ''}" data-lang="${l[0]}">${l[1]}</button>`).join('')}</div></div>
-      <div class="prof-card"><div class="prof-section-title">${L('contacts')}</div>
-        <div class="prof-row"><span class="pr-ic" data-ic="store"></span><div class="pr-text">${esc(c.shop_name || '')}</div></div>
-        ${c.phone ? `<div class="prof-row"><span class="pr-ic" data-ic="phone"></span><div class="pr-text">${esc(c.phone)}</div></div>` : ''}
-        ${c.working_hours ? `<div class="prof-row"><span class="pr-ic" data-ic="clock"></span><div class="pr-text">${esc(c.working_hours)}</div></div>` : ''}
+      <div class="prof-card" style="--i:0"><div class="prof-head"><div class="prof-avatar">${esc(initial)}</div><div><div class="prof-name">${esc(name)}</div><div class="prof-phone">${user.username ? '@' + esc(user.username) : ''}</div></div></div></div>
+
+      <div class="prof-card" style="--i:1"><div class="prof-section-title">${L('language')}</div><div class="lang-row">${langs.map(l => `<button class="lang-pick ${State.lang === l[0] ? 'active' : ''}" data-lang="${l[0]}">${l[1]}</button>`).join('')}</div></div>
+
+      ${rows.length ? `<div class="prof-card" style="--i:2"><div class="prof-section-title">${L('contacts')}</div>${rows.join('')}</div>` : ''}
+
+      <div class="prof-card" style="--i:3"><div class="prof-section-title">${L('delivery_info')}</div>${delivRows.join('')}</div>
+
+      <div class="prof-card" style="--i:4"><div class="prof-section-title">${L('our_promise')}</div>
+        <div class="prof-row"><span class="pr-ic" data-ic="leaf"></span><div class="pr-text">${L('promise_organic')}</div></div>
+        <div class="prof-row"><span class="pr-ic aqua" data-ic="snowflake"></span><div class="pr-text">${L('promise_cold')}</div></div>
+        <div class="prof-row"><span class="pr-ic" data-ic="shield"></span><div class="pr-text">${L('promise_fresh')}</div></div>
       </div>
     </div>`;
   applyIcons(el('profileContent'));
-  el('profileContent').querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { setLang(b.dataset.lang); renderProfile(); });
+  el('profileContent').querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { haptic('light'); setLang(b.dataset.lang); renderProfile(); });
+  // Tashqi havolalar Telegram ichida ochilishi kerak (brauzerga sakramasin).
+  el('profileContent').querySelectorAll('[data-open-link]').forEach(b => b.onclick = () => {
+    const url = b.dataset.openLink;
+    try { if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch (e) {}
+  });
 }
 
 /* ── Sheets ── */
@@ -492,6 +864,7 @@ function switchView(view) {
   if (view === 'cart') renderCart();
   if (view === 'orders') loadOrders();
   if (view === 'profile') renderProfile();
+  updateFabCart();
   window.scrollTo(0, 0);
 }
 
@@ -501,15 +874,14 @@ async function loadProducts() {
     const params = new URLSearchParams();
     if (State.currentCategory) params.set('category_id', State.currentCategory);
     if (State.search) params.set('q', State.search);
+    if (State.sort) params.set('sort', State.sort);
     State.products = await api('/products?' + params.toString());
     renderProducts();
   } catch (e) { el('products').innerHTML = ''; toast(e.message); }
 }
 
 /* Statik HTML'dagi data-i18n / data-i18n-ph / data-i18n-aria markerlariga
-   ega barcha elementlarga joriy tildagi matnni qo'yadi. Bu tufayli sahifa
-   nomlari (Savat / Buyurtmalarim / Profil), bottom-nav yozuvlari va boshqa
-   statik matnlar til bilan birga o'zgaradi. */
+   ega barcha elementlarga joriy tildagi matnni qo'yadi. */
 function applyI18n(root) {
   const scope = root || document;
   scope.querySelectorAll('[data-i18n]').forEach((node) => {
@@ -526,8 +898,7 @@ function applyI18n(root) {
   });
 }
 
-/* Serverga (bot profiliga) tanlangan tilni yuboradi — sinxron uchun.
-   Muvaffaqiyatsizlik jim: mahalliy tildan foydalanish davom etadi. */
+/* Serverga (bot profiliga) tanlangan tilni yuboradi — sinxron uchun. */
 function persistLangToBot(lang) {
   try {
     api('/lang', { method: 'POST', body: JSON.stringify({ lang }) })
@@ -540,25 +911,33 @@ function setLang(lang, opts) {
   const changed = State.lang !== lang;
   State.lang = lang;
   localStorage.setItem('lang', lang);
-  // HTML dagi barcha statik matnlar (sahifa nomlari, nav yozuvlari, ...)
+  // HTML dagi barcha statik matnlar (sahifa nomlari, nav yozuvlari, shior, ...)
   applyI18n();
   // Dinamik render qilinadigan qismlar
   const si = el('searchInput'); if (si) si.placeholder = L('search');
   const pt = el('productsTitle'); if (pt) pt.textContent = L('products');
-  const ss = el('shopStatus'); if (ss) ss.textContent = L('online_shop');
+  const ss = el('shopStatus'); if (ss) ss.textContent = L('brand_tagline');
+  renderHero();
+  renderSortbar();
   applyShopStatus(); // "Do'kon yopiq" banner matni ham tilga moslashsin
+  updateFabCart();
   if (State.categories && State.categories.length !== undefined) renderCategories();
   if (State.products && State.products.length !== undefined) renderProducts();
-  // Botga saqlash (foydalanuvchi profilida) — faqat foydalanuvchi o'zi
-  // o'zgartirganda (silent=true bo'lmasa). Bot -> WebApp yo'nalishida takror
-  // yozib qo'yishning keragi yo'q.
+  if (State.view === 'profile') renderProfile();
+  // Botga saqlash (foydalanuvchi profilida) — faqat foydalanuvchi o'zi o'zgartirganda.
   if (changed && !(opts && opts.silent)) persistLangToBot(lang);
 }
 
+/* Telegram header/fon rangi CSS palitrasi bilan bir xil bo'lishi kerak
+   (--bg = #F6FBF8). DB'dagi eski `primary_color` QO'LLANILMAYDI. */
+const THEME_BG = '#F6FBF8';
 function applyTheme() {
-  // Rang butunlay CSS (brend palitrasi) tomonidan boshqariladi — DB'dagi eski
-  // primary_color (masalan sovuq #7000FF) endi QO'LLANILMAYDI.
-  if (tg) { try { tg.setHeaderColor && tg.setHeaderColor('#FFFDF8'); tg.setBackgroundColor && tg.setBackgroundColor('#FFFDF8'); } catch (e) {} }
+  if (tg) {
+    try {
+      tg.setHeaderColor && tg.setHeaderColor(THEME_BG);
+      tg.setBackgroundColor && tg.setBackgroundColor(THEME_BG);
+    } catch (e) {}
+  }
 }
 
 /* Faqat Telegram orqali ochilishi kerak — aks holda "gate" ekran ko'rsatiladi. */
@@ -566,14 +945,18 @@ function showTelegramGate() {
   const sp = el('splash'); if (sp) sp.style.display = 'none';
   const gate = document.createElement('div');
   gate.className = 'tg-gate';
-  gate.innerHTML = `<div class="gate-logo">${ICONS.bag}</div><h2>${L('gate_title')}</h2><p>${L('gate_text')}</p>`;
+  gate.innerHTML = `<div class="gate-logo">${ICONS.milk}</div><h2>${L('gate_title')}</h2><p>${L('gate_text')}</p>`;
   document.body.appendChild(gate);
+  // ICONS.milk stroke uslubida — gate-logo rangini meros qilib oladi.
+  gate.querySelectorAll('svg').forEach(s => {
+    s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
+    s.setAttribute('stroke-width', '1.9'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+  });
 }
 
 function isInTelegram() {
   // Telegram ichida ekanligini bir nechta signal bilan aniqlaymiz. `initData` ba'zi
-  // launch usullarida bo'sh kelishi mumkin — shунga qaramay Telegram deb hisoblaymiz.
-  // (Oddiy brauzerda: initData bo'sh, user yo'q, platform 'unknown' → gate ko'rinadi.)
+  // launch usullarida bo'sh kelishi mumkin — shunga qaramay Telegram deb hisoblaymiz.
   if (!tg) return false;
   if (typeof tg.initData === 'string' && tg.initData.length > 0) return true;
   if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) return true;
@@ -589,9 +972,7 @@ function setShopLogo() {
 }
 
 /* Do'kon holati bannerini joriy is_open bo'yicha yangilaydi.
-   is_open === false BO'LGANDAGINA "Do'kon hozircha yopiq" ko'rinadi. Ochiq bo'lsa
-   (yoki holat noma'lum bo'lsa) banner butunlay yashiriladi. Manba — /api/config →
-   is_shop_open(), ya'ni superadmin "Do'kon holati" tugmasidagi natija bilan bir xil. */
+   is_open === false BO'LGANDAGINA "Do'kon hozircha yopiq" ko'rinadi. */
 function applyShopStatus() {
   const cb = el('closedBanner');
   if (!cb) return;
@@ -606,9 +987,7 @@ function applyShopStatus() {
   }
 }
 
-/* Mini App qayta faollashganda (foydalanuvchi botga o'tib qaytганда yoki oynani
-   qayta ochganda) do'kon holatini serverdan yangilaymiz — shunda do'kon ochilgan
-   bo'lsa eski "yopiq" banner darhol yo'qoladi (va aksincha). */
+/* Mini App qayta faollashganda do'kon holatini serverdan yangilaymiz. */
 let _statusRefreshT = null;
 async function refreshShopStatus() {
   clearTimeout(_statusRefreshT);
@@ -618,6 +997,7 @@ async function refreshShopStatus() {
       if (cfg && typeof cfg === 'object') {
         State.config = Object.assign({}, State.config, cfg);
         applyShopStatus();
+        renderHero();
         // Botda til o'zgartirilib WebApp'ga qaytilsa — bu yerda darhol qo'llaymiz.
         if (cfg.user_lang && ['uz', 'ru', 'en'].includes(cfg.user_lang) && cfg.user_lang !== State.lang) {
           setLang(cfg.user_lang, { silent: true });
@@ -641,13 +1021,11 @@ async function init() {
   // Faqat Telegram ichida ishlaydi.
   if (!isInTelegram()) { showTelegramGate(); return; }
   // Telegram ichida, lekin initData bo'sh bo'lsa — buyurtma/auth ishlamaydi.
-  // Foydalanuvchini ishonchli ☰ menyu tugmasiga yo'naltiramiz.
   if (!tg.initData || tg.initData.length === 0) { showAuthBanner(); }
   applyIcons(document);
   try { State.config = await api('/config'); }
-  catch (e) { State.config = { shop_name: "Do'kon", currency: "so'm", primary_color: '#7A573F', min_order_amount: 0, delivery_fee: 0, free_delivery_from: 0, is_open: true, delivery_slots: [] }; }
-  // Bot orqali tanlangan til (foydalanuvchi profilidan) ustunlik qiladi —
-  // shu tufayli botda til o'zgartirilsa, WebApp keyingi ochilishida shu tilda ochiladi.
+  catch (e) { State.config = { shop_name: "Do'kon", currency: "so'm", min_order_amount: 0, delivery_fee: 0, free_delivery_from: 0, is_open: true, delivery_slots: [] }; }
+  // Bot orqali tanlangan til (foydalanuvchi profilidan) ustunlik qiladi.
   if (State.config && State.config.user_lang && ['uz', 'ru', 'en'].includes(State.config.user_lang)) {
     setLang(State.config.user_lang, { silent: true });
   } else {
@@ -656,25 +1034,26 @@ async function init() {
   el('searchInput').placeholder = L('search');
   el('productsTitle').textContent = L('products');
   el('shopName').textContent = State.config.shop_name || "Do'kon";
-  el('shopStatus').textContent = L('online_shop');
+  el('shopStatus').textContent = L('brand_tagline');
   applyTheme();
   setShopLogo();
-  // Do'kon holati bannerini ko'rsatish/yashirish (server is_open bo'yicha — bu
-  // superadmin "Do'kon holati" tugmasi bilan bir xil manba: is_shop_open()).
+  renderHero();
   applyShopStatus();
+  renderSortbar();
   skeletonGrid();
   try { State.categories = await api('/categories'); } catch (e) { State.categories = []; }
   renderCategories();
   await loadProducts();
   try { renderBanners(await api('/banners')); } catch (e) {}
   updateBadge();
-  const sp = el('splash'); sp.style.opacity = '0'; setTimeout(() => sp.style.display = 'none', 300);
+  const sp = el('splash'); sp.style.opacity = '0'; setTimeout(() => sp.style.display = 'none', 400);
 }
 
 function bindEvents() {
-  document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => switchView(n.dataset.nav));
+  document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => { haptic('light'); switchView(n.dataset.nav); });
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
   el('tbCart').onclick = () => switchView('cart');
+  const fab = el('fabCart'); if (fab) fab.onclick = () => { haptic('medium'); switchView('cart'); };
   const goShop = el('emptyGoShop'); if (goShop) goShop.onclick = () => switchView('home');
   let searchTimer;
   el('searchInput').oninput = (e) => { State.search = e.target.value.trim(); el('searchClear').hidden = !State.search; clearTimeout(searchTimer); searchTimer = setTimeout(loadProducts, 350); };

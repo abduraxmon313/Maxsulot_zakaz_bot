@@ -66,6 +66,12 @@ PRODUCT_NEW_COLUMNS = [
     ("deleted_at", "TIMESTAMP"),
 ]
 
+BANNER_NEW_COLUMNS = [
+    # Banner rasmlari ham DB'da (Media) saqlanadi — Mini App uni /api/image/<id>
+    # orqali oladi. Eski DB'larda bu ustun bo'lmagan (serializer esa kutgan).
+    ("image_media_id", "INTEGER"),
+]
+
 ORDER_NEW_COLUMNS = [
     ("lat", "DOUBLE PRECISION"),
     ("lng", "DOUBLE PRECISION"),
@@ -135,6 +141,11 @@ async def _run_migrations(conn):
             await conn.execute(text(f'ALTER TABLE orders ADD COLUMN IF NOT EXISTS {col} {ddl}'))
         except Exception as e:
             logger.warning(f"Migration skip orders.{col}: {e}")
+    for col, ddl in BANNER_NEW_COLUMNS:
+        try:
+            await conn.execute(text(f'ALTER TABLE banners ADD COLUMN IF NOT EXISTS {col} {ddl}'))
+        except Exception as e:
+            logger.warning(f"Migration skip banners.{col}: {e}")
     # Majburiy jadvallar (create_all ishlashiga qo'shimcha himoya).
     for name, ddl in FORCE_TABLES:
         try:
