@@ -19,24 +19,28 @@
 [hidden] { display: none !important; }
 
 :root {
-  /* ── Rang shkalalari (ramps) ── */
-  --leaf-50:  #F1FAF4;
-  --leaf-100: #E1F5E9;
-  --leaf-200: #C1E9D2;
-  --leaf-300: #8FD9AE;
-  --leaf-400: #4FC185;
-  --leaf-500: #2FA766;
-  --leaf-600: #1E8B51;
-  --leaf-700: #166F40;
-  --leaf-800: #10552F;
-  --leaf-900: #0A3A21;
+  /* ── Rang shkalalari (ramps) ──
+     Yashil ATAYLAB moviy tomonga siljitilgan (hue ~160°, ya'ni "emerald-teal").
+     Shu tufayli u toza yashil emas — ichida moviy o'ynaydi, lekin baribir
+     "organik yashil" deb o'qiladi. Aqua (moviy) ikkinchi urg'u, jigarrang esa
+     iliq yuzalar va mayda detallar uchun. */
+  --leaf-50:  #F0FAF6;
+  --leaf-100: #DBF3EA;
+  --leaf-200: #B5E7D6;
+  --leaf-300: #7FD5BB;
+  --leaf-400: #43BE9C;
+  --leaf-500: #1BA07E;
+  --leaf-600: #12855F;
+  --leaf-700: #0E6B4E;
+  --leaf-800: #0A5240;
+  --leaf-900: #073A2E;
 
-  --aqua-50:  #E8F8FA;
-  --aqua-100: #D0F1F5;
-  --aqua-300: #7ADCE4;
-  --aqua-500: #17A8B4;
-  --aqua-600: #0E8A96;
-  --aqua-700: #0A6B75;
+  --aqua-50:  #E7F7FA;
+  --aqua-100: #CDEFF4;
+  --aqua-300: #74D8E2;
+  --aqua-500: #15A2B2;
+  --aqua-600: #0C8494;
+  --aqua-700: #096776;
 
   --honey-50:  #FFF8E7;
   --honey-100: #FFEFC6;
@@ -44,9 +48,14 @@
   --honey-500: #F0B429;
   --honey-600: #CE9718;
 
-  --earth-50:  #F8F2EC;
-  --earth-300: #DCC3AB;
+  /* Jigarrang — logotipdan. Iliq yuzalar (rasm ortidagi fon, skeleton) va
+     mayda detallar (eski narx, bo'sh holat ikonasi) uchun. */
+  --earth-50:  #FAF5EF;
+  --earth-100: #F1E7DA;
+  --earth-300: #D6BCA2;
+  --earth-400: #A8825F;
   --earth-600: #7A573F;
+  --earth-700: #5E4130;
 
   /* ── Semantik brend ── */
   --primary: var(--leaf-600);
@@ -62,22 +71,27 @@
 
   --gold: var(--honey-500);             /* logotip sarig'i — faqat aksent */
   --gold-soft: var(--honey-50);
-  --earth: var(--earth-600);            /* logotip jigarrangi — mayda detal */
+  --earth: var(--earth-600);            /* logotip jigarrangi — iliq detal */
+  --earth-soft: var(--earth-50);
 
   --on-primary: #FFFFFF;                /* to'q yashil ustidagi matn (WCAG AA+) */
   --on-gold: #4A3405;                   /* sariq ustidagi to'q matn */
 
   /* ── Yuzalar ── */
-  --bg: #F6FBF8;                        /* mint-oq (Ivory o'rniga) */
-  --bg-2: #EFF7F2;
+  --bg: #F5FBF9;                        /* mint-oq, moviyroq nuansda */
+  --bg-2: #ECF6F2;
   --card: #FFFFFF;
-  --line: #E2EFE7;
-  --line-2: #EEF6F1;
+  --line: #DFEDE8;
+  --line-2: #ECF5F1;
+  /* Iliq krem — mahsulot rasmi ortidagi fon va skeleton uchun (sut/tvorog
+     fotolari sovuq mint fonda emas, iliq kremda chiroyliroq ko'rinadi). */
+  --cream: var(--earth-50);
+  --cream-2: var(--earth-100);
 
   /* ── Matn ── */
-  --text: #102A1C;                      /* to'q yashil-qora */
-  --text-2: #335342;
-  --muted: #647E70;
+  --text: #0E2A20;                      /* to'q yashil-moviy qora */
+  --text-2: #2F5245;
+  --muted: #667F76;
 
   /* ── Holatlar ── */
   /* Sevimlilar (yurakcha) — yashil palitraga mos iliq malina rangi.
@@ -86,8 +100,9 @@
   --fav-soft: #FDECF0;
   --fav-line: #F7C6D2;
 
-  --success: #1E8B51;
-  --success-soft: #E1F5E9;
+  /* Muvaffaqiyat rangi asosiy yashil bilan bir xil nuansda (emerald-teal). */
+  --success: var(--leaf-600);
+  --success-soft: var(--leaf-100);
   --warning: #C8891A;
   --warning-soft: #FFF3D6;
   --error: #C8453B;
@@ -95,20 +110,24 @@
   --info: var(--aqua-600);
   --info-soft: var(--aqua-50);
 
-  /* ── Gradientlar ── */
-  --grad: linear-gradient(135deg, #47C68C 0%, #1E8B51 55%, #166F40 100%);
-  --grad-btn: linear-gradient(135deg, #35B978 0%, #1E8B51 100%);
-  --grad-btn-press: linear-gradient(135deg, #2AA46A 0%, #166F40 100%);
-  --grad-accent: linear-gradient(135deg, #35C8D2 0%, #0E8A96 100%);
+  /* ── Gradientlar ──
+     Yashildan MOVIYGA o'tadi: chap yuqorida yorqin emerald, o'ng pastda teal.
+     Shu tufayli tugma/chip/badge'larda moviy nuans ko'zga tashlanadi. */
+  --grad: linear-gradient(135deg, #3CC49E 0%, #12855F 50%, #0C7E86 100%);
+  --grad-btn: linear-gradient(135deg, #21A480 0%, #12855F 55%, #0D7C84 100%);
+  --grad-btn-press: linear-gradient(135deg, #198D6C 0%, #0E6B4E 55%, #0A6873 100%);
+  --grad-accent: linear-gradient(135deg, #2FC3D0 0%, #0C8494 100%);
   --grad-honey: linear-gradient(135deg, #FBD97A 0%, #F0B429 100%);
+  /* Iliq jigarrang aksent gradienti (kichik detallar uchun). */
+  --grad-earth: linear-gradient(135deg, #C79E77 0%, #7A573F 100%);
 
-  /* ── Soyalar (yashil-tinted, iliq emas) ── */
-  --sh-xs: 0 1px 2px rgba(12, 58, 33, .05);
-  --sh-sm: 0 4px 14px rgba(12, 58, 33, .07);
-  --sh-md: 0 12px 30px rgba(12, 58, 33, .11);
-  --sh-lg: 0 20px 48px rgba(12, 58, 33, .17);
-  --sh-primary: 0 8px 22px rgba(30, 139, 81, .28);
-  --sh-primary-hi: 0 14px 30px rgba(30, 139, 81, .36);
+  /* ── Soyalar (yashil-moviy nuansda) ── */
+  --sh-xs: 0 1px 2px rgba(7, 52, 44, .05);
+  --sh-sm: 0 4px 14px rgba(7, 52, 44, .07);
+  --sh-md: 0 12px 30px rgba(7, 52, 44, .11);
+  --sh-lg: 0 20px 48px rgba(7, 52, 44, .17);
+  --sh-primary: 0 8px 22px rgba(18, 133, 95, .26);
+  --sh-primary-hi: 0 14px 30px rgba(13, 124, 132, .34);
 
   /* ── Radius ── */
   --r-xs: 10px;
@@ -148,7 +167,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 input, textarea { font-family: inherit; font-size: 16px; color: var(--text); }
 svg { display: block; }
 img { display: block; max-width: 100%; }
-::selection { background: var(--leaf-200); color: var(--leaf-900); }
+::selection { background: var(--earth-100); color: var(--earth-700); }
 
 /* Ikonalar */
 [data-ic] { display: inline-flex; }
@@ -200,7 +219,7 @@ img { display: block; max-width: 100%; }
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: calc(env(safe-area-inset-top) + 14px) 20px 14px;
-  background: rgba(246, 251, 248, .84);
+  background: rgba(245, 251, 249, .84);
   backdrop-filter: saturate(180%) blur(18px);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--line);
@@ -313,10 +332,10 @@ img { display: block; max-width: 100%; }
 .card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--sh-xs); transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), border-color var(--t) var(--ease); }
 .card:active { transform: scale(.977); }
 @media (hover: hover) { .card:hover { transform: translateY(-5px); box-shadow: var(--sh-md); border-color: var(--primary-line); } }
-.imgwrap { position: relative; aspect-ratio: 1/1; background: var(--primary-tint); overflow: hidden; }
+.imgwrap { position: relative; aspect-ratio: 1/1; background: var(--cream); overflow: hidden; }
 .imgwrap img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--t-slow) var(--ease); }
 @media (hover: hover) { .card:hover .imgwrap img { transform: scale(1.06); } }
-.imgwrap .ph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--leaf-300); }
+.imgwrap .ph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--earth-300); }
 .imgwrap .ph svg { width: 40px; height: 40px; }
 .discount-badge { position: absolute; top: 10px; left: 10px; background: var(--grad-honey); color: var(--on-gold); font-size: 12px; font-weight: 800; padding: 4px 9px; border-radius: var(--r-full); box-shadow: var(--sh-sm); animation: popIn 340ms var(--ease-spring); }
 /* Sevimlilar tugmasi — mahsulot rasmi ustidagi yurakcha.
@@ -340,7 +359,7 @@ img { display: block; max-width: 100%; }
 .card { display: flex; flex-direction: column; }
 .info { padding: 12px 13px 14px; flex: 1; display: flex; flex-direction: column; }
 .price { font-size: 16px; font-weight: 800; letter-spacing: -.01em; color: var(--text); }
-.price .old { font-size: 12.5px; font-weight: 500; color: var(--muted); text-decoration: line-through; margin-left: 6px; }
+.price .old { font-size: 12.5px; font-weight: 500; color: var(--earth-400); text-decoration: line-through; margin-left: 6px; }
 .pname { font-size: 13.5px; color: var(--text-2); margin: 3px 0 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; line-height: 1.4; }
 .info .add, .info .qty-mini { margin-top: auto; }
 .add { position: relative; overflow: hidden; width: 100%; height: 40px; border-radius: var(--r-sm); background: var(--primary-soft); color: var(--primary-strong); font-weight: 700; font-size: 13.5px; transition: background var(--t) var(--ease), color var(--t) var(--ease), transform var(--t-fast) var(--ease); }
@@ -359,13 +378,13 @@ img { display: block; max-width: 100%; }
 .skeleton { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; padding: 0 0 14px; }
 .sk-img { aspect-ratio: 1/1; }
 .sk-line { height: 12px; border-radius: 6px; margin: 12px 13px 0; }
-.sk-img, .sk-line { background: linear-gradient(100deg, #EAF4EE 30%, #F6FBF8 50%, #EAF4EE 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+.sk-img, .sk-line { background: linear-gradient(100deg, #F1E9DF 30%, #FBF7F2 50%, #F1E9DF 70%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 
 /* ═══════════════════════════════════════════════════════════
    BO'SH HOLATLAR
    ═══════════════════════════════════════════════════════════ */
 .empty { text-align: center; padding: 66px 30px; color: var(--muted); animation: fadeUp var(--t-slow) var(--ease); }
-.empty-ic { width: 86px; height: 86px; margin: 0 auto 18px; border-radius: 27px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; color: var(--leaf-300); box-shadow: var(--sh-sm); animation: floatUpDown 3.2s var(--ease) infinite; }
+.empty-ic { width: 86px; height: 86px; margin: 0 auto 18px; border-radius: 27px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; color: var(--earth-300); box-shadow: var(--sh-sm); animation: floatUpDown 3.2s var(--ease) infinite; }
 .empty-ic svg { width: 36px; height: 36px; }
 .empty p { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 18px; }
 
@@ -394,9 +413,9 @@ img { display: block; max-width: 100%; }
    ═══════════════════════════════════════════════════════════ */
 .cart-items { padding: 16px 20px 8px; display: flex; flex-direction: column; gap: 12px; }
 .cart-item { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; box-shadow: var(--sh-xs); opacity: 0; animation: fadeUp var(--t) var(--ease) forwards; animation-delay: calc(var(--i, 0) * 45ms); }
-.ci-img { width: 66px; height: 66px; border-radius: 14px; overflow: hidden; background: var(--primary-tint); flex-shrink: 0; }
+.ci-img { width: 66px; height: 66px; border-radius: 14px; overflow: hidden; background: var(--cream); flex-shrink: 0; }
 .ci-img img { width: 100%; height: 100%; object-fit: cover; }
-.ci-img .ph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--leaf-300); }
+.ci-img .ph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--earth-300); }
 .ci-img .ph svg { width: 26px; height: 26px; }
 .ci-info { flex: 1; min-width: 0; }
 .ci-name { font-weight: 600; font-size: 14.5px; margin-bottom: 4px; }
@@ -456,7 +475,7 @@ img { display: block; max-width: 100%; }
 .otl-lbl { font-size: 9.5px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.2; }
 .otl-step.done .otl-lbl, .otl-step.current .otl-lbl { color: var(--primary-strong); }
 .otl-step:not(:last-child)::before { content: ''; position: absolute; top: 9px; left: 50%; width: 100%; height: 2px; background: var(--line); }
-.otl-step.done:not(:last-child)::before { background: var(--leaf-400); }
+.otl-step.done:not(:last-child)::before { background: var(--grad-accent); }
 .otl.canceled .otl-dot { background: var(--error-soft); border-color: var(--error-soft); }
 
 /* ═══════════════════════════════════════════════════════════
@@ -473,9 +492,9 @@ img { display: block; max-width: 100%; }
 .sheet-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 16px; }
 
 /* Mahsulot detali */
-.pd-img { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: var(--r-lg); overflow: hidden; background: var(--primary-tint); margin-bottom: 16px; }
+.pd-img { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: var(--r-lg); overflow: hidden; background: var(--cream); margin-bottom: 16px; }
 .pd-img img { width: 100%; height: 100%; object-fit: cover; }
-.pd-img .ph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--leaf-300); }
+.pd-img .ph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--earth-300); }
 .pd-img .ph svg { width: 54px; height: 54px; }
 /* Katta rasmda yurakcha ham kattaroq bo'lsin. */
 .pd-img .fav-badge { top: 12px; right: 12px; width: 40px; height: 40px; box-shadow: var(--sh-sm); }
@@ -487,7 +506,7 @@ img { display: block; max-width: 100%; }
 .tag.aqua { background: var(--accent-soft); color: var(--aqua-700); }
 .pd-name { font-size: 21px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
 .pd-price { font-size: 25px; font-weight: 800; color: var(--primary-strong); letter-spacing: -.02em; }
-.pd-old { font-size: 15px; color: var(--muted); text-decoration: line-through; margin-left: 8px; }
+.pd-old { font-size: 15px; color: var(--earth-400); text-decoration: line-through; margin-left: 8px; }
 .pd-desc { color: var(--text-2); font-size: 14.5px; line-height: 1.62; margin: 14px 0; }
 .pd-meta { font-size: 13.5px; font-weight: 600; color: var(--success); margin-bottom: 16px; display: inline-flex; align-items: center; gap: 6px; }
 .pd-meta svg { width: 16px; height: 16px; }
