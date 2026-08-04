@@ -24,16 +24,16 @@
      Shu tufayli u toza yashil emas — ichida moviy o'ynaydi, lekin baribir
      "organik yashil" deb o'qiladi. Aqua (moviy) ikkinchi urg'u, jigarrang esa
      iliq yuzalar va mayda detallar uchun. */
-  --leaf-50:  #F0FAF6;
-  --leaf-100: #DBF3EA;
-  --leaf-200: #B5E7D6;
-  --leaf-300: #7FD5BB;
-  --leaf-400: #43BE9C;
-  --leaf-500: #1BA07E;
-  --leaf-600: #12855F;
-  --leaf-700: #0E6B4E;
-  --leaf-800: #0A5240;
-  --leaf-900: #073A2E;
+  --leaf-50:  #EFFBF7;
+  --leaf-100: #D6F5EA;
+  --leaf-200: #ABEAD6;
+  --leaf-300: #74DABF;
+  --leaf-400: #3CC7A2;
+  --leaf-500: #1DAF87;
+  --leaf-600: #159672;   /* yuzalar/gradient uchun — YORQINLASHTIRILDI */
+  --leaf-700: #107A5D;   /* oq fonda MATN uchun (kontrast 5.3:1) */
+  --leaf-800: #0B5F49;
+  --leaf-900: #08422F;
 
   --aqua-50:  #E7F7FA;
   --aqua-100: #CDEFF4;
@@ -94,11 +94,13 @@
   --muted: #667F76;
 
   /* ── Holatlar ── */
-  /* Sevimlilar (yurakcha) — yashil palitraga mos iliq malina rangi.
-     Yashil/moviydan yetarlicha farq qiladi, lekin "chinqirmaydi". */
-  --fav: #E0466B;
-  --fav-soft: #FDECF0;
-  --fav-line: #F7C6D2;
+  /* Sevimlilar (yurakcha) — SARIQ/oltin, ya'ni savat panelidagi dumaloq
+     raqam badge'i (--grad-honey) bilan bir xil rang oilasi. */
+  --fav: var(--honey-500);
+  --fav-soft: var(--honey-50);
+  --fav-line: var(--honey-100);
+  /* Oq fonda o'qiladigan "oltin" matn rangi (sof sariq matn ko'rinmaydi). */
+  --gold-strong: #8A5E12;
 
   /* Muvaffaqiyat rangi asosiy yashil bilan bir xil nuansda (emerald-teal). */
   --success: var(--leaf-600);
@@ -113,9 +115,9 @@
   /* ── Gradientlar ──
      Yashildan MOVIYGA o'tadi: chap yuqorida yorqin emerald, o'ng pastda teal.
      Shu tufayli tugma/chip/badge'larda moviy nuans ko'zga tashlanadi. */
-  --grad: linear-gradient(135deg, #3CC49E 0%, #12855F 50%, #0C7E86 100%);
-  --grad-btn: linear-gradient(135deg, #21A480 0%, #12855F 55%, #0D7C84 100%);
-  --grad-btn-press: linear-gradient(135deg, #198D6C 0%, #0E6B4E 55%, #0A6873 100%);
+  --grad: linear-gradient(135deg, #4AD6B0 0%, #159672 50%, #0F8F98 100%);
+  --grad-btn: linear-gradient(135deg, #26BC97 0%, #159672 55%, #0F8A93 100%);
+  --grad-btn-press: linear-gradient(135deg, #1DA582 0%, #107A5D 55%, #0C7480 100%);
   --grad-accent: linear-gradient(135deg, #2FC3D0 0%, #0C8494 100%);
   --grad-honey: linear-gradient(135deg, #FBD97A 0%, #F0B429 100%);
   /* Iliq jigarrang aksent gradienti (kichik detallar uchun). */
@@ -126,8 +128,8 @@
   --sh-sm: 0 4px 14px rgba(7, 52, 44, .07);
   --sh-md: 0 12px 30px rgba(7, 52, 44, .11);
   --sh-lg: 0 20px 48px rgba(7, 52, 44, .17);
-  --sh-primary: 0 8px 22px rgba(18, 133, 95, .26);
-  --sh-primary-hi: 0 14px 30px rgba(13, 124, 132, .34);
+  --sh-primary: 0 8px 22px rgba(21, 150, 114, .26);
+  --sh-primary-hi: 0 14px 30px rgba(15, 138, 147, .34);
 
   /* ── Radius ── */
   --r-xs: 10px;
@@ -234,7 +236,7 @@ img { display: block; max-width: 100%; }
 }
 .tb-logo:active { transform: scale(.94); }
 .tb-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-.tb-eyebrow { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--primary); white-space: nowrap; overflow: hidden; }
+.tb-eyebrow { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--primary-strong); white-space: nowrap; overflow: hidden; }
 .tb-eyebrow svg { width: 13px; height: 13px; stroke-width: 2.4; flex-shrink: 0; }
 .tb-eyebrow > span { overflow: hidden; text-overflow: ellipsis; }
 .tb-name { font-size: 18.5px; font-weight: 800; letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -242,7 +244,7 @@ img { display: block; max-width: 100%; }
 .tb-icon:active { transform: scale(.92); }
 @media (hover: hover) { .tb-icon:hover { border-color: var(--primary-line); box-shadow: var(--sh-sm); } }
 
-.badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--r-full); background: var(--grad-btn); color: var(--on-primary); font-size: 11px; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--bg); box-shadow: var(--sh-xs); animation: badgePop 380ms var(--ease-spring); }
+.badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--r-full); background: var(--grad-honey); color: var(--on-gold); font-size: 11px; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--bg); box-shadow: var(--sh-xs); animation: badgePop 380ms var(--ease-spring); }
 
 .home-scroll { padding: 16px 20px 24px; }
 
@@ -286,7 +288,7 @@ img { display: block; max-width: 100%; }
 .cat-wrap { margin: 20px -20px 0; }
 .cat-strip { display: flex; gap: 9px; overflow-x: auto; padding: 3px 20px; -ms-overflow-style: none; scrollbar-width: none; }
 .cat-strip::-webkit-scrollbar { display: none; }
-.cat-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; white-space: nowrap; color: var(--text); transition: background var(--t) var(--ease), color var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t-fast) var(--ease); box-shadow: var(--sh-xs); }
+.cat-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); font-weight: 700; font-size: 13.5px; white-space: nowrap; color: var(--text); transition: background var(--t) var(--ease), color var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t-fast) var(--ease); box-shadow: var(--sh-xs); }
 .cat-chip .cc-ic { display: inline-flex; align-items: center; justify-content: center; font-size: 15.5px; line-height: 1; color: var(--primary); transition: color var(--t) var(--ease); }
 .cat-chip .cc-ic svg { width: 18px; height: 18px; stroke-width: 2; }
 /* Uzun kategoriya nomi chipni cho'zib yubormasin. */
@@ -303,7 +305,7 @@ img { display: block; max-width: 100%; }
 .sortbar::-webkit-scrollbar { display: none; }
 .sort-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border-radius: var(--r-full); background: var(--bg-2); border: 1px solid transparent; font-size: 12.5px; font-weight: 700; color: var(--muted); white-space: nowrap; transition: all var(--t) var(--ease); }
 .sort-chip svg { width: 15px; height: 15px; stroke-width: 2.2; }
-.sort-chip.active { background: var(--card); border-color: var(--primary-line); color: var(--primary); box-shadow: var(--sh-xs); }
+.sort-chip.active { background: var(--card); border-color: var(--primary-line); color: var(--primary-strong); box-shadow: var(--sh-xs); }
 .sort-chip:active { transform: scale(.95); }
 
 /* ═══════════════════════════════════════════════════════════
@@ -399,7 +401,7 @@ img { display: block; max-width: 100%; }
 @media (hover: hover) { .btn:not(:disabled):hover { filter: brightness(1.04); box-shadow: var(--sh-primary-hi); } }
 .btn:disabled { opacity: .5; pointer-events: none; box-shadow: none; }
 .btn svg { width: 20px; height: 20px; }
-.btn-ghost { background: transparent; color: var(--primary); box-shadow: none; height: 46px; }
+.btn-ghost { background: transparent; color: var(--primary-strong); box-shadow: none; height: 46px; }
 .btn-ghost::after { display: none; }
 .btn-ghost:active { background: var(--primary-soft); }
 .btn-soft { background: var(--primary-soft); color: var(--primary-strong); box-shadow: none; }
@@ -457,11 +459,14 @@ img { display: block; max-width: 100%; }
 .st-confirmed { background: var(--accent-soft); color: var(--aqua-700); }
 .st-preparing { background: var(--accent-soft); color: var(--aqua-700); }
 .st-on_way { background: var(--aqua-100); color: var(--aqua-700); }
-.st-delivered, .st-completed { background: var(--success-soft); color: var(--success); }
+.st-delivered { background: var(--success-soft); color: var(--leaf-700); }
+/* «Yakunlangan» — MOVIY (yashil emas). To'ldirilgan pill: bu OXIRGI holat,
+   shu sabab «Yo'lda» (och moviy) dan aniq ajralib turadi. */
+.st-completed { background: var(--grad-accent); color: #fff; }
 .st-canceled, .st-rejected { background: var(--error-soft); color: var(--error); }
 .order-items-mini { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin-bottom: 10px; }
 .order-total { font-weight: 800; font-size: 16px; color: var(--primary-strong); }
-.order-paid { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--success); margin-left: 8px; }
+.order-paid { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--gold-strong); background: var(--gold-soft); padding: 3px 9px; border-radius: var(--r-full); margin-left: 8px; vertical-align: middle; }
 .order-paid svg { width: 14px; height: 14px; }
 
 /* Buyurtma jarayoni chizig'i (timeline) — mijoz holatni bir qarashda ko'radi */
@@ -469,7 +474,7 @@ img { display: block; max-width: 100%; }
 .otl-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative; }
 .otl-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--bg-2); border: 2px solid var(--line); color: transparent; display: grid; place-items: center; z-index: 1; transition: all var(--t) var(--ease); }
 .otl-dot svg { width: 11px; height: 11px; stroke-width: 3.2; }
-.otl-step.done .otl-dot { background: var(--grad-btn); border-color: transparent; color: #fff; }
+.otl-step.done .otl-dot { background: var(--grad-accent); border-color: transparent; color: #fff; }
 .otl-step.current .otl-dot { background: var(--card); border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
 .otl-step.current .otl-dot::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--primary); animation: pulseRing 1.8s var(--ease) infinite; }
 .otl-lbl { font-size: 9.5px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.2; }
@@ -535,7 +540,7 @@ img { display: block; max-width: 100%; }
 .seg { display: flex; gap: 8px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r); padding: 5px; }
 .seg button { flex: 1; height: 46px; border-radius: 13px; font-weight: 700; font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: all var(--t) var(--ease); }
 .seg button svg { width: 18px; height: 18px; }
-.seg button.active { background: var(--card); color: var(--primary); box-shadow: var(--sh-sm); }
+.seg button.active { background: var(--card); color: var(--primary-strong); box-shadow: var(--sh-sm); }
 .seg button.disabled { opacity: .4; }
 
 /* ── Manzil xaritasi (Yandex) ── */
@@ -556,8 +561,8 @@ img { display: block; max-width: 100%; }
 
 /* ── Buyurtma muvaffaqiyat ekrani ── */
 .order-success { text-align: center; padding: 24px 8px 8px; animation: fadeUp var(--t-slow) var(--ease); }
-.os-check { position: relative; width: 90px; height: 90px; margin: 0 auto 18px; border-radius: 50%; background: var(--success-soft); color: var(--success); display: grid; place-items: center; animation: popIn 480ms var(--ease-spring); }
-.os-check::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--leaf-400); animation: pulseRing 2s var(--ease) infinite; }
+.os-check { position: relative; width: 90px; height: 90px; margin: 0 auto 18px; border-radius: 50%; background: var(--aqua-50); color: var(--aqua-600); display: grid; place-items: center; animation: popIn 480ms var(--ease-spring); }
+.os-check::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--aqua-300); animation: pulseRing 2s var(--ease) infinite; }
 .os-check svg { width: 46px; height: 46px; stroke-width: 2.4; stroke-dasharray: 60; animation: drawCheck 700ms var(--ease) 180ms both; }
 .order-success h3 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
 .os-num { color: var(--primary-strong); font-weight: 700; margin-bottom: 18px; }
@@ -599,7 +604,7 @@ img { display: block; max-width: 100%; }
 .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); position: relative; transition: color var(--t) var(--ease); }
 .nav-item svg { width: 23px; height: 23px; transition: transform var(--t) var(--ease-spring); }
 .nav-item small { font-size: 10.5px; font-weight: 700; }
-.nav-item.active { color: var(--primary); }
+.nav-item.active { color: var(--primary-strong); }
 .nav-item.active svg { transform: translateY(-2px) scale(1.06); }
 .nav-item:active svg { transform: scale(.88); }
 /* Faol tab ustidagi kichik indikator — animatsiya bilan cho'ziladi */
