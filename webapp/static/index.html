@@ -3,16 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#FFFDF8" />
-  <title>Do'kon</title>
+  <!-- Mint-oq yuza (organik palitra). app.js dagi applyTheme() bilan bir xil bo'lishi shart. -->
+  <meta name="theme-color" content="#F6FBF8" />
+  <title>Organik do'kon</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=21" />
+  <link rel="stylesheet" href="/static/styles.css?v=22" />
 </head>
 <body>
-  <div id="splash" class="splash"><div class="spinner"></div></div>
+  <!-- Splash: animatsiyali brend belgisi (sut idishi + yaproq).
+       SVG bu yerda INLINE — splash JS ishga tushishidan oldin ko'rinishi kerak. -->
+  <div id="splash" class="splash">
+    <div class="splash-inner">
+      <div class="splash-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 2h6" />
+          <path d="M9.5 2v3.1a2 2 0 0 1-.38 1.17L7.6 8.5A3 3 0 0 0 7 10.3V19a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3v-8.7a3 3 0 0 0-.6-1.8l-1.52-2.23A2 2 0 0 1 14.5 5.1V2" />
+          <path d="M7.1 12.5h9.8" />
+          <path d="M12 19.6c-1.9 0-3-1.4-2.6-3.2 1.5.2 2.4 1.1 2.6 3.2Z" />
+        </svg>
+      </div>
+      <div class="spinner"></div>
+    </div>
+  </div>
 
   <main id="app">
     <!-- ═══ HOME ═══ -->
@@ -21,7 +36,12 @@
         <div class="tb-brand">
           <div class="tb-logo" id="shopLogo"></div>
           <div class="tb-text">
-            <span class="tb-eyebrow" id="shopStatus">Onlayn do'kon</span>
+            <!-- Brend shiori: "Fermadan uyingizgacha" — organik + yetkazib berish
+                 ma'nosini birga beradi ("Onlayn do'kon" o'rniga). -->
+            <span class="tb-eyebrow">
+              <span data-ic="leaf"></span>
+              <span id="shopStatus" data-i18n="brand_tagline">Fermadan uyingizgacha</span>
+            </span>
             <b class="tb-name" id="shopName">Do'kon</b>
           </div>
         </div>
@@ -32,6 +52,9 @@
       </header>
 
       <div class="home-scroll">
+        <!-- Premium hero — do'kon qiymat taklifi + ishonch belgilari (JS to'ldiradi) -->
+        <section id="hero" class="hero" hidden></section>
+
         <div class="searchbar">
           <span data-ic="search" class="sb-ic"></span>
           <input type="text" id="searchInput" placeholder="Mahsulot qidirish…" data-i18n-ph="search" autocomplete="off" aria-label="Qidirish" />
@@ -43,13 +66,17 @@
         </div>
 
         <div id="banners" class="banners"></div>
+        <div id="bannerDots" class="banner-dots" hidden></div>
 
         <div id="catWrap" class="cat-wrap">
           <div id="categories" class="cat-strip"></div>
         </div>
 
+        <div id="sortbar" class="sortbar"></div>
+
         <div class="section-head">
           <h2 class="section-title" id="productsTitle">Mahsulotlar</h2>
+          <span class="section-count" id="productsCount" hidden></span>
         </div>
 
         <div id="products" class="grid"></div>
@@ -62,7 +89,10 @@
 
     <!-- ═══ CART ═══ -->
     <section id="view-cart" class="view">
-      <header class="page-head"><h1 data-i18n="cart_title">Savat</h1></header>
+      <header class="page-head">
+        <h1 data-i18n="cart_title">Savat</h1>
+        <p class="page-sub" id="cartSub" hidden></p>
+      </header>
       <div id="cartItems" class="cart-items"></div>
       <div id="cartEmpty" class="empty" hidden>
         <div class="empty-ic"><span data-ic="cart"></span></div>
@@ -105,6 +135,16 @@
     </div>
   </div>
 
+  <!-- Suzuvchi savat paneli (bosh sahifada, savat bo'sh bo'lmasa) -->
+  <button id="fabCart" class="fab-cart" type="button">
+    <span class="fc-ic"><span data-ic="cart"></span><b class="fc-count" id="fabCount">0</b></span>
+    <span class="fc-text">
+      <span class="fc-label" data-i18n="in_cart">Savatda</span>
+      <span class="fc-total" id="fabTotal">0</span>
+    </span>
+    <span class="fc-go"><span data-i18n="view_cart">Ko'rish</span><span data-ic="arrowRight"></span></span>
+  </button>
+
   <!-- Bottom nav -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-nav="home"><span data-ic="home"></span><small data-i18n="nav_home">Asosiy</small></button>
@@ -114,6 +154,6 @@
   </nav>
 
   <div id="toast" class="toast"></div>
-  <script src="/static/app.js?v=21"></script>
+  <script src="/static/app.js?v=22"></script>
 </body>
 </html>

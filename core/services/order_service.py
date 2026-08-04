@@ -228,6 +228,20 @@ async def get_order(session: AsyncSession, order_id: int) -> Order | None:
     return await session.get(Order, order_id)
 
 
+async def status_history(session: AsyncSession, order_id: int) -> list[OrderStatusHistory]:
+    """Buyurtma holati tarixi (kim, qachon, qaysi holatga o'tkazgan).
+
+    Admin panelidagi «🕘 Tarix» tugmasi uchun — nizoli holatlarda kim nima
+    qilganini aniqlash imkonini beradi.
+    """
+    stmt = (
+        select(OrderStatusHistory)
+        .where(OrderStatusHistory.order_id == int(order_id))
+        .order_by(OrderStatusHistory.id)
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
 async def set_payment(session: AsyncSession, order: Order, provider: str, is_paid: bool) -> Order:
     """Buyurtmaga to'lov usulini belgilaydi.
 
@@ -248,10 +262,21 @@ async def mark_paid(session: AsyncSession, order: Order, provider: str) -> Order
     return await set_payment(session, order, provider, is_paid=True)
 
 
+async def get_by_number(session: AsyncSession, order_number: int) -> Order | None:
+    """Buyurtma raqami (#1042) bo'yicha topish — admin `/order 1042` uchun."""
+    stmt = select(Order).where(Order.order_number == int(order_number))
+    return (await session.execute(stmt)).scalars().first()
+
+
+# Admin panelida "faol" deb hisoblanadigan statuslar (ish talab qiladiganlar).
+ACTIVE_STATUSES = ["created", "confirmed", "preparing", "on_way"]
+
+
 async def list_orders(
     session: AsyncSession,
     telegram_id: int | None = None,
     status: str | None = None,
+    statuses: list[str] | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[Order]:
@@ -260,8 +285,57 @@ async def list_orders(
         stmt = stmt.where(Order.user_id == telegram_id)
     if status:
         stmt = stmt.where(Order.status == status)
+    elif statuses:
+        stmt = stmt.where(Order.status.in_(statuses))
     stmt = stmt.order_by(Order.created_at.desc()).limit(limit).offset(offset)
     return list((await session.execute(stmt)).scalars().all())
+
+
+async def count_orders(
+    session: AsyncSession,
+    telegram_id: int | None = None,
+    status: str | None = None,
+    statuses: list[str] | None = None,
+) -> int:
+    """`list_orders` bilan bir xil filtr bo'yicha son — sahifalash uchun."""
+    stmt = select(func.count(Order.id))
+    if telegram_id is not None:
+        stmt = stmt.where(Order.user_id == telegram_id)
+    if status:
+        stmt = stmt.where(Order.status == status)
+    elif statuses:
+        stmt = stmt.where(Order.status.in_(statuses))
+    return int((await session.execute(stmt)).scalar() or 0)
+
+
+async def counts_by_status(session: AsyncSession) -> dict[str, int]:
+    """{status: soni} — admin filtri va analitika uchun bitta so'rovda."""
+    rows = (await session.execute(
+        select(Order.status, func.count(Order.id)).group_by(Order.status)
+    )).all()
+    return {st: int(cnt) for st, cnt in rows}
+
+
+async def top_products(session: AsyncSession, limit: int = 5) -> list[tuple[str, int, int]]:
+    """Eng ko'p sotilgan mahsulotlar: [(nom, jami dona, jami summa), ...].
+
+    Faqat bekor qilinmagan buyurtmalar hisobga olinadi — aks holda "sotilgan"
+    ko'rsatkich haqiqatni buzadi.
+    """
+    stmt = (
+        select(
+            OrderItem.name_snapshot,
+            func.sum(OrderItem.qty),
+            func.sum(OrderItem.line_total),
+        )
+        .join(Order, Order.id == OrderItem.order_id)
+        .where(Order.status.notin_(["canceled", "rejected"]))
+        .group_by(OrderItem.name_snapshot)
+        .order_by(func.sum(OrderItem.qty).desc())
+        .limit(limit)
+    )
+    rows = (await session.execute(stmt)).all()
+    return [(name, int(qty or 0), int(total or 0)) for name, qty, total in rows]
 
 
 # ── Statistika (Super Admin analiz uchun) ──

@@ -14,7 +14,9 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
-    emoji: Mapped[str] = mapped_column(String(8), default="🛍")
+    # Standart belgi — organik sut mahsulotlari biznesiga mos (avval "🛍" edi).
+    # catalog_service.create_category() ham shu qiymatni ishlatadi.
+    emoji: Mapped[str] = mapped_column(String(8), default="🥛")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

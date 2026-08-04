@@ -25,6 +25,18 @@ def _image_url(media_id: str) -> str:
     return f"/api/image/{media_id}" if media_id.isdigit() else ""
 
 
+def _coord(raw: str) -> float | None:
+    """Sozlamadagi koordinata matnini float'ga aylantiradi (yaroqsiz bo'lsa None)."""
+    try:
+        val = float(str(raw or "").strip())
+    except (TypeError, ValueError):
+        return None
+    # Mantiqsiz qiymatlar (0,0 yoki diapazondan tashqari) — koordinata yo'q deb qaraymiz.
+    if val == 0.0:
+        return None
+    return val
+
+
 async def _try_user_lang(request: Request, session: AsyncSession) -> str | None:
     """
     Agar so'rov Telegram initData bilan tasdiqlangan bo'lsa — foydalanuvchining
@@ -65,6 +77,12 @@ async def get_config(request: Request, session: AsyncSession = Depends(get_db)):
         "delivery_slots": slots,
         "maps_api_key": YANDEX_MAPS_API_KEY,
         "languages": SUPPORTED_LANGUAGES,
+        # Mini App profilida "Operator bilan bog'lanish" tugmasi uchun (@username).
+        "admin_contact": (s.get("admin_contact", "") or "").strip(),
+        # Do'kon manzili — profil sahifasida xarita havolasi sifatida ko'rsatiladi.
+        "shop_address": (s.get("shop_address", "") or "").strip(),
+        "shop_lat": _coord(s.get("shop_lat", "")),
+        "shop_lng": _coord(s.get("shop_lng", "")),
         # Bot'da tanlangan til — Mini App shu bilan boshlaydi (sinxron uchun).
         "user_lang": user_lang,
         "welcome": {

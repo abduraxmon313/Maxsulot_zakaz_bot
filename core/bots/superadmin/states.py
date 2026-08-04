@@ -19,11 +19,17 @@ class AddCategory(StatesGroup):
     emoji = State()
 
 
-class EditPrice(StatesGroup):
+class EditProduct(StatesGroup):
+    """Mahsulotning BITTA maydonini tahrirlash.
+
+    Qaysi maydon tahrirlanayotgani FSM ma'lumotida (`field`, `product_id`,
+    `page`) saqlanadi — shu tufayli har maydon uchun alohida state kerak emas.
+    """
     value = State()
 
 
-class EditStock(StatesGroup):
+class EditCategory(StatesGroup):
+    """Kategoriyaning bitta maydonini tahrirlash (`field` FSM ma'lumotida)."""
     value = State()
 
 
@@ -34,5 +40,26 @@ class ShopLocation(StatesGroup):
 
 
 class AddAdminRole(StatesGroup):
-    """Yangi admin/superadmin qo'shish — telegram_id kutiladi."""
-    telegram_id = State()
+    """Yangi admin/superadmin qo'shish.
+
+    Foydalanuvchini KO'P USULDA aniqlash mumkin: kontakt ulashish, xabarni
+    forward qilish, @username yoki raqamli ID. Oldin faqat raqamli ID edi.
+    """
+    identify = State()
+
+
+class AddBanner(StatesGroup):
+    """Banner qo'shish: rasm -> havola turi -> havola qiymati."""
+    photo = State()
+    link_type = State()
+    link_value = State()
+
+
+class ProductSearch(StatesGroup):
+    """Mahsulotlar ro'yxatini nomi bo'yicha qidirish."""
+    query = State()
+
+
+class Broadcast(StatesGroup):
+    """Mijozlarga ommaviy xabar: matn -> tasdiq."""
+    text = State()

@@ -57,3 +57,31 @@ async def set_phone(session: AsyncSession, telegram_id: int, phone: str) -> None
 async def get_language(session: AsyncSession, telegram_id: int) -> str:
     user = await get_by_telegram_id(session, telegram_id)
     return (user.language if user else None) or DEFAULT_LANGUAGE
+
+
+
+async def count_users(session: AsyncSession) -> int:
+    from sqlalchemy import func
+
+    return int((await session.execute(select(func.count(User.id)))).scalar() or 0)
+
+
+async def list_customer_ids(session: AsyncSession) -> list[int]:
+    """Ommaviy xabar (broadcast) uchun bloklanmagan mijozlarning telegram_id lari."""
+    stmt = select(User.telegram_id).where(User.is_blocked.is_(False))
+    return [int(tid) for tid in (await session.execute(stmt)).scalars().all()]
+
+
+async def find_by_username(session: AsyncSession, username: str) -> User | None:
+    """@username bo'yicha foydalanuvchini topadi (katta-kichik harf farqsiz).
+
+    Super Admin bot admin qo'shishda raqamli ID o'rniga @username kiritishi uchun.
+    Foydalanuvchi hech bo'lmasa bir marta botga /start bosgan bo'lishi kerak.
+    """
+    uname = (username or "").strip().lstrip("@")
+    if not uname:
+        return None
+    from sqlalchemy import func
+
+    stmt = select(User).where(func.lower(User.username) == uname.lower())
+    return (await session.execute(stmt)).scalars().first()
