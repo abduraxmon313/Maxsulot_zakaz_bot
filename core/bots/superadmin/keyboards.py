@@ -40,29 +40,42 @@ PAGE_SIZE = 8
 # Tahrirlanadigan sozlamalar: kalit -> (yorliq, tur). tur: text | int | image
 EDITABLE_SETTINGS: list[tuple[str, str, str]] = [
     ("shop_name", "🏪 Do'kon nomi", "text"),
-    ("shop_image", "🖼 Do'kon rasmi (logo)", "image"),
     ("currency", "💱 Valyuta belgisi", "text"),
     ("phone", "☎️ Telefon", "text"),
     ("admin_contact", "🧑‍💼 Operator (@username)", "text"),
     ("working_hours", "🕒 Ish vaqti", "text"),
+    # IKKI XIL RASM — ular BOSHQA-BOSHQA joyda ko'rinadi (avval bu chalkash edi).
+    ("shop_image", "🖼 Mini App logotipi", "image"),
+    ("welcome_image", "🖼 Salom xabari rasmi", "image"),
     ("min_order_amount", "🧾 Minimal buyurtma", "int"),
     ("delivery_fee", "🚚 Yetkazib berish narxi", "int"),
     ("free_delivery_from", "🆓 Bepul yetkazish chegarasi", "int"),
     ("welcome_uz", "👋 Salom xabari (UZ)", "text"),
     ("welcome_ru", "👋 Salom xabari (RU)", "text"),
     ("welcome_en", "👋 Salom xabari (EN)", "text"),
-    ("welcome_image", "🖼 Salom rasmi", "image"),
 ]
 
 SETTING_LABELS = {key: label for key, label, _ in EDITABLE_SETTINGS}
 SETTING_TYPES = {key: typ for key, _, typ in EDITABLE_SETTINGS}
 
-# Sozlamalar guruhlari — 13 ta tugmani bitta ro'yxatga tashlash o'rniga
+# Har bir sozlama QAYERDA ko'rinishini tushuntiradi — ayniqsa ikki rasm uchun
+# muhim (Super Admin ularni chalkashtirmasin).
+SETTING_HINTS: dict[str, str] = {
+    "shop_image": "Mini App'ning yuqori chap burchagidagi kichik logotip.",
+    "welcome_image": "Sotuv botda /start bosilganda chiqadigan katta rasm.",
+    "admin_contact": "Mini App profilida «Operator bilan bog'lanish» tugmasi.",
+    "working_hours": "Do'kon shu vaqtdan tashqarida buyurtma qabul qilmaydi.",
+    "free_delivery_from": "0 = o'chirilgan. Mini App savatida progress ko'rsatiladi.",
+    "min_order_amount": "0 = cheklov yo'q.",
+}
+
+# Sozlamalar guruhlari — 14 ta tugmani bitta ro'yxatga tashlash o'rniga
 # mavzu bo'yicha ajratamiz (topish osonlashadi).
 SETTING_GROUPS: dict[str, tuple[str, list[str]]] = {
-    "shop": ("🏪 Do'kon ma'lumotlari", ["shop_name", "shop_image", "currency", "phone", "admin_contact", "working_hours"]),
+    "shop": ("🏪 Do'kon ma'lumotlari", ["shop_name", "currency", "phone", "admin_contact", "working_hours"]),
+    "media": ("🖼 Logotip va rasmlar", ["shop_image", "welcome_image"]),
     "money": ("💰 Narx va yetkazish", ["min_order_amount", "delivery_fee", "free_delivery_from"]),
-    "welcome": ("👋 Salom xabarlari", ["welcome_uz", "welcome_ru", "welcome_en", "welcome_image"]),
+    "welcome": ("👋 Salom xabarlari", ["welcome_uz", "welcome_ru", "welcome_en"]),
 }
 
 # Buyurtma statuslari filtri (Buyurtmalar bo'limi uchun).
@@ -224,11 +237,13 @@ def product_card_kb(product, page: int) -> InlineKeyboardMarkup:
 
     Oldin faqat narx/qoldiq/faollik/o'chirish bor edi; nom, tavsif, eski narx
     (chegirma), rasm, kategoriya va tartib tahrirlanmagan (DB'da esa bor edi).
+    Rus/ingliz tarjimalari alohida «🌐 Tarjimalar» submenusida — karta toza qolsin.
     """
     pid = product.id
     active = product.is_active and product.deleted_at is None
     return InlineKeyboardMarkup(inline_keyboard=[
         [_btn("✏️ Nom", f"pe:name:{pid}:{page}"), _btn("📝 Tavsif", f"pe:desc:{pid}:{page}")],
+        [_btn("🌐 Tarjimalar (RU / EN)", f"ptr:{pid}:{page}")],
         [_btn("💰 Narx", f"pe:price:{pid}:{page}"), _btn("🏷 Eski narx", f"pe:oldprice:{pid}:{page}")],
         [_btn("📦 Qoldiq", f"pe:stock:{pid}:{page}"), _btn("🖼 Rasm", f"pe:photo:{pid}:{page}")],
         [_btn("🗂 Kategoriya", f"pcatm:{pid}:{page}"), _btn("🔢 Tartib", f"pe:sort:{pid}:{page}")],
@@ -237,6 +252,30 @@ def product_card_kb(product, page: int) -> InlineKeyboardMarkup:
             _btn("🗑 O'chirish", f"pdel:{pid}:{page}"),
         ],
         back_row(f"pl:{page}", "⬅️ Ro'yxat"),
+    ])
+
+
+def product_translations_kb(product, page: int) -> InlineKeyboardMarkup:
+    """Mahsulot nomi va tavsifining RU/EN tarjimalari."""
+    pid = product.id
+    ok = lambda v: "✅" if (v or "").strip() else "➖"  # noqa: E731
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [_btn(f"{ok(product.name_ru)} 🇷🇺 Nom (RU)", f"pe:name_ru:{pid}:{page}")],
+        [_btn(f"{ok(product.name_en)} 🇬🇧 Nom (EN)", f"pe:name_en:{pid}:{page}")],
+        [_btn(f"{ok(product.description_ru)} 🇷🇺 Tavsif (RU)", f"pe:desc_ru:{pid}:{page}")],
+        [_btn(f"{ok(product.description_en)} 🇬🇧 Tavsif (EN)", f"pe:desc_en:{pid}:{page}")],
+        back_row(f"pv:{pid}:{page}", "⬅️ Kartaga"),
+    ])
+
+
+def category_translations_kb(cat, page: int) -> InlineKeyboardMarkup:
+    """Kategoriya nomining RU/EN tarjimalari."""
+    cid = cat.id
+    ok = lambda v: "✅" if (v or "").strip() else "➖"  # noqa: E731
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [_btn(f"{ok(cat.name_ru)} 🇷🇺 Nom (RU)", f"ce:name_ru:{cid}:{page}")],
+        [_btn(f"{ok(cat.name_en)} 🇬🇧 Nom (EN)", f"ce:name_en:{cid}:{page}")],
+        back_row(f"cv:{cid}:{page}", "⬅️ Kartaga"),
     ])
 
 
@@ -279,6 +318,7 @@ def category_card_kb(cat, page: int) -> InlineKeyboardMarkup:
     cid = cat.id
     return InlineKeyboardMarkup(inline_keyboard=[
         [_btn("✏️ Nom", f"ce:name:{cid}:{page}"), _btn("😀 Emoji", f"ce:emoji:{cid}:{page}")],
+        [_btn("🌐 Tarjimalar (RU / EN)", f"ctr:{cid}:{page}")],
         [_btn("🔼 Yuqoriga", f"cmv:{cid}:-1:{page}"), _btn("🔽 Pastga", f"cmv:{cid}:1:{page}")],
         [
             _btn("🔴 Nofaol qilish" if cat.is_active else "🟢 Faollashtirish", f"ctog:{cid}:{page}"),

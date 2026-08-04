@@ -7,7 +7,11 @@ class EditSetting(StatesGroup):
 
 
 class AddProduct(StatesGroup):
+    """Mahsulot qo'shish. Nom UCH TILDA so'raladi (RU/EN o'tkazib yuborilishi
+    mumkin — u holda Mini App o'zbekcha nomni ko'rsatadi)."""
     name = State()
+    name_ru = State()
+    name_en = State()
     price = State()
     stock = State()
     category = State()
@@ -15,7 +19,10 @@ class AddProduct(StatesGroup):
 
 
 class AddCategory(StatesGroup):
+    """Kategoriya qo'shish — nom uch tilda, so'ng emoji."""
     name = State()
+    name_ru = State()
+    name_en = State()
     emoji = State()
 
 

@@ -64,6 +64,27 @@ PRODUCT_NEW_COLUMNS = [
     ("sort_order", "INTEGER DEFAULT 0"),
     ("is_active", "BOOLEAN DEFAULT TRUE"),
     ("deleted_at", "TIMESTAMP"),
+    # Ko'p tilli nom/tavsif — Mini App tilga qarab tanlaydi (bo'sh bo'lsa uz).
+    ("name_ru", "VARCHAR(200)"),
+    ("name_en", "VARCHAR(200)"),
+    ("description_ru", "TEXT"),
+    ("description_en", "TEXT"),
+]
+
+CATEGORY_NEW_COLUMNS = [
+    ("name_ru", "VARCHAR(120)"),
+    ("name_en", "VARCHAR(120)"),
+]
+
+USER_NEW_COLUMNS = [
+    ("language_chosen", "BOOLEAN DEFAULT FALSE"),
+]
+
+# Allaqachon onboarding'dan o'tgan (telefoni bor) mijozlardan tilni QAYTA
+# so'ramaymiz — ular uchun flag darhol TRUE qilinadi.
+USER_BACKFILL = [
+    "UPDATE users SET language_chosen = TRUE "
+    "WHERE language_chosen = FALSE AND phone IS NOT NULL AND phone <> ''",
 ]
 
 BANNER_NEW_COLUMNS = [
@@ -146,6 +167,21 @@ async def _run_migrations(conn):
             await conn.execute(text(f'ALTER TABLE banners ADD COLUMN IF NOT EXISTS {col} {ddl}'))
         except Exception as e:
             logger.warning(f"Migration skip banners.{col}: {e}")
+    for col, ddl in CATEGORY_NEW_COLUMNS:
+        try:
+            await conn.execute(text(f'ALTER TABLE categories ADD COLUMN IF NOT EXISTS {col} {ddl}'))
+        except Exception as e:
+            logger.warning(f"Migration skip categories.{col}: {e}")
+    for col, ddl in USER_NEW_COLUMNS:
+        try:
+            await conn.execute(text(f'ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {ddl}'))
+        except Exception as e:
+            logger.warning(f"Migration skip users.{col}: {e}")
+    for sql in USER_BACKFILL:
+        try:
+            await conn.execute(text(sql))
+        except Exception as e:
+            logger.warning("User backfill skip: %s", e)
     # Majburiy jadvallar (create_all ishlashiga qo'shimcha himoya).
     for name, ddl in FORCE_TABLES:
         try:

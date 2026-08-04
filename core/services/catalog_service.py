@@ -18,13 +18,21 @@ async def list_categories(session: AsyncSession, only_active: bool = True) -> li
     return list((await session.execute(stmt)).scalars().all())
 
 
-async def create_category(session: AsyncSession, name: str, emoji: str = "🥛") -> Category:
+async def create_category(
+    session: AsyncSession,
+    name: str,
+    emoji: str = "🥛",
+    name_ru: str | None = None,
+    name_en: str | None = None,
+) -> Category:
     # Yangi kategoriya ro'yxat oxiriga tushsin — mavjud tartibni buzmaymiz.
     max_order = int(
         (await session.execute(select(func.coalesce(func.max(Category.sort_order), 0)))).scalar() or 0
     )
     cat = Category(
         name=name.strip(),
+        name_ru=(name_ru or "").strip() or None,
+        name_en=(name_en or "").strip() or None,
         emoji=(emoji or "🥛").strip()[:8],
         sort_order=max_order + 1,
     )
@@ -50,15 +58,25 @@ async def update_category(
     category_id: int,
     *,
     name: str | None = None,
+    name_ru: str | None = None,
+    name_en: str | None = None,
     emoji: str | None = None,
     is_active: bool | None = None,
 ) -> Category | None:
-    """Kategoriyaning berilgan maydonlarini yangilaydi (None = tegilmaydi)."""
+    """Kategoriyaning berilgan maydonlarini yangilaydi (None = tegilmaydi).
+
+    Tarjimani O'CHIRISH uchun bo'sh satr ("") yuboriladi — u NULL ga aylanadi
+    va Mini App o'zbek nomiga qaytadi.
+    """
     cat = await session.get(Category, category_id)
     if not cat:
         return None
     if name is not None:
         cat.name = name.strip()[:120]
+    if name_ru is not None:
+        cat.name_ru = name_ru.strip()[:120] or None
+    if name_en is not None:
+        cat.name_en = name_en.strip()[:120] or None
     if emoji is not None:
         cat.emoji = (emoji or "🥛").strip()[:8]
     if is_active is not None:
@@ -104,6 +122,36 @@ def _active_filter(stmt):
     return stmt.where(Product.is_active.is_(True), Product.deleted_at.is_(None))
 
 
+def _search_filter(query: str, lang: str | None = None):
+    """Qidiruv shartи: nom/tavsifning BARCHA tillaridan izlaydi.
+
+    Mijoz ruscha nom bilan qidirsa ham topilishi kerak, shu sabab faqat joriy
+    tilga cheklanmaymiz (tarjima kiritilmagan bo'lishi ham mumkin).
+    """
+    like = f"%{query.strip()}%"
+    return or_(
+        Product.name.ilike(like),
+        Product.name_ru.ilike(like),
+        Product.name_en.ilike(like),
+        Product.description.ilike(like),
+        Product.description_ru.ilike(like),
+        Product.description_en.ilike(like),
+    )
+
+
+async def list_products_by_ids(session: AsyncSession, ids: list[int]) -> list[Product]:
+    """Berilgan ID lar bo'yicha FAOL mahsulotlar (sevimlilar sahifasi uchun).
+
+    Tartib mijoz yuborgan ID lar ketma-ketligida qaytariladi — sevimlilar
+    ro'yxati "sakrab" turmasligi uchun. O'chirilgan mahsulotlar tashlab yuboriladi.
+    """
+    if not ids:
+        return []
+    stmt = _active_filter(select(Product)).where(Product.id.in_(ids))
+    found = {p.id: p for p in (await session.execute(stmt)).scalars().all()}
+    return [found[i] for i in ids if i in found]
+
+
 async def list_products(
     session: AsyncSession,
     category_id: int | None = None,
@@ -113,6 +161,7 @@ async def list_products(
     sort: str = "popular",
     limit: int = 100,
     offset: int = 0,
+    lang: str | None = None,
 ) -> list[Product]:
     stmt = select(Product)
     if only_active:
@@ -125,8 +174,7 @@ async def list_products(
     if category_id:
         stmt = stmt.where(Product.category_id == category_id)
     if query:
-        like = f"%{query.strip()}%"
-        stmt = stmt.where(or_(Product.name.ilike(like), Product.description.ilike(like)))
+        stmt = stmt.where(_search_filter(query, lang))
 
     if sort == "cheap":
         stmt = stmt.order_by(Product.price.asc())
@@ -155,9 +203,13 @@ async def create_product(
     image_file_id: str | None = None,
     image_media_id: int | None = None,
     old_price: int | None = None,
+    name_ru: str | None = None,
+    name_en: str | None = None,
 ) -> Product:
     product = Product(
         name=name.strip(),
+        name_ru=(name_ru or "").strip() or None,
+        name_en=(name_en or "").strip() or None,
         price=int(price),
         category_id=category_id,
         description=(description or "").strip(),
@@ -188,16 +240,20 @@ async def count_products(
     if category_id:
         stmt = stmt.where(Product.category_id == category_id)
     if query:
-        like = f"%{query.strip()}%"
-        stmt = stmt.where(or_(Product.name.ilike(like), Product.description.ilike(like)))
+        stmt = stmt.where(_search_filter(query))
     return int((await session.execute(stmt)).scalar() or 0)
 
 
 # Super Admin bot orqali tahrirlanadigan maydonlar (oq ro'yxat — xavfsizlik).
 EDITABLE_PRODUCT_FIELDS = {
-    "name", "description", "price", "old_price", "stock",
+    "name", "name_ru", "name_en",
+    "description", "description_ru", "description_en",
+    "price", "old_price", "stock",
     "category_id", "image_media_id", "sort_order", "is_active",
 }
+
+# Bo'sh satr yuborilsa NULL ga aylanadigan maydonlar (tarjimani o'chirish).
+_NULLABLE_TEXT_FIELDS = {"name_ru", "name_en", "description_ru", "description_en"}
 
 
 async def update_product(session: AsyncSession, product_id: int, **fields) -> Product | None:
@@ -210,8 +266,12 @@ async def update_product(session: AsyncSession, product_id: int, **fields) -> Pr
     if not product:
         return None
     for key, value in fields.items():
-        if key in EDITABLE_PRODUCT_FIELDS:
-            setattr(product, key, value)
+        if key not in EDITABLE_PRODUCT_FIELDS:
+            continue
+        # Bo'sh tarjima NULL bo'lsin — aks holda Mini App bo'sh nom ko'rsatadi.
+        if key in _NULLABLE_TEXT_FIELDS and isinstance(value, str) and not value.strip():
+            value = None
+        setattr(product, key, value)
     await session.commit()
     await session.refresh(product)
     return product

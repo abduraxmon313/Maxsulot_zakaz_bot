@@ -37,8 +37,20 @@ async def _send_welcome(message: Message, session: AsyncSession, lang: str):
     await message.answer(welcome, reply_markup=kb)
 
 
+async def _ask_phone(message: Message, state: FSMContext, lang: str):
+    await state.set_state(Onboarding.phone)
+    await message.answer(t("onboard_phone", lang), reply_markup=contact_request(lang))
+
+
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, session: AsyncSession):
+    """Zamonaviy onboarding oqimi:
+
+      1) TIL tanlash — eng birinchi qadam. Telegram'dan kelgan `language_code`
+         faqat taxmin, shuning uchun foydalanuvchidan aniq so'raymiz.
+      2) Telefon raqam (agar hali bo'lmasa) — tanlangan tilda so'raladi.
+      3) Xush kelibsiz xabari — tanlangan tilda.
+    """
     await state.clear()
     user = await user_service.upsert(
         session,
@@ -47,11 +59,21 @@ async def cmd_start(message: Message, state: FSMContext, session: AsyncSession):
         username=message.from_user.username,
         language=(message.from_user.language_code or "uz")[:2],
     )
-    # Onboarding: telefon raqami bo'lmasa — avval uni so'raymiz.
-    if not user.phone:
-        await state.set_state(Onboarding.phone)
-        await message.answer(t("onboard_phone", user.language), reply_markup=contact_request(user.language))
+
+    # 1-qadam: til hali TANLANMAGAN bo'lsa — uch tilli savol beramiz.
+    if not user.language_chosen:
+        await message.answer(
+            t("choose_language_first", user.language),
+            reply_markup=language_inline(),
+        )
         return
+
+    # 2-qadam: telefon raqami.
+    if not user.phone:
+        await _ask_phone(message, state, user.language)
+        return
+
+    # 3-qadam: xush kelibsiz.
     await _send_welcome(message, session, user.language)
 
 
@@ -83,14 +105,24 @@ async def onboarding_need_contact(message: Message, session: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("setlang:"))
-async def cb_set_language(callback: CallbackQuery, session: AsyncSession):
+async def cb_set_language(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     lang = callback.data.split(":", 1)[1]
+    if lang not in ("uz", "ru", "en"):
+        await callback.answer()
+        return
     await user_service.set_language(session, callback.from_user.id, lang)
     await callback.answer(t("language_set", lang))
     try:
         await callback.message.delete()
     except Exception:
         pass
+
+    # Til tanlangandan keyin oqim davom etadi: telefon yo'q bo'lsa — so'raymiz,
+    # bor bo'lsa darhol xush kelibsiz xabari (endi to'g'ri tilda).
+    user = await user_service.get_by_telegram_id(session, callback.from_user.id)
+    if user and not user.phone:
+        await _ask_phone(callback.message, state, lang)
+        return
     await _send_welcome(callback.message, session, lang)
 
 

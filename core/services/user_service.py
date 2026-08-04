@@ -41,10 +41,21 @@ async def upsert(
 
 
 async def set_language(session: AsyncSession, telegram_id: int, language: str) -> None:
+    """Tilni saqlaydi va uni FOYDALANUVCHI TANLAGAN deb belgilaydi.
+
+    `language_chosen` flagi tufayli /start da til qayta-qayta so'ralmaydi
+    (Mini App'dagi til almashtirish ham shu funksiyaga tushadi).
+    """
     user = await get_by_telegram_id(session, telegram_id)
     if user:
         user.language = language
+        user.language_chosen = True
         await session.commit()
+
+
+async def has_chosen_language(session: AsyncSession, telegram_id: int) -> bool:
+    user = await get_by_telegram_id(session, telegram_id)
+    return bool(user and user.language_chosen)
 
 
 async def set_phone(session: AsyncSession, telegram_id: int, phone: str) -> None:

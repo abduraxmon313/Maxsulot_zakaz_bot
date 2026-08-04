@@ -10,10 +10,24 @@ def product_image_url(product) -> str:
     return ""
 
 
-def serialize_product(product, detail: bool = False) -> dict:
+def localized(obj, field: str, lang: str | None) -> str:
+    """Tilga mos matnni qaytaradi, bo'lmasa o'zbek (asosiy) variantiga qaytadi.
+
+    Super Admin tarjimalarni ixtiyoriy kiritadi — shuning uchun `name_ru` /
+    `name_en` bo'sh bo'lsa mijoz baribir mahsulot nomini ko'radi (bo'sh satr emas).
+    """
+    lang = (lang or "uz").strip().lower()
+    if lang in ("ru", "en"):
+        value = getattr(obj, f"{field}_{lang}", None)
+        if value and str(value).strip():
+            return str(value)
+    return str(getattr(obj, field, "") or "")
+
+
+def serialize_product(product, detail: bool = False, lang: str | None = None) -> dict:
     data = {
         "id": product.id,
-        "name": product.name,
+        "name": localized(product, "name", lang),
         "price": product.price,
         "old_price": product.old_price,
         "image": product_image_url(product),
@@ -23,12 +37,12 @@ def serialize_product(product, detail: bool = False) -> dict:
         "rating": round(product.rating or 0, 1),
     }
     if detail:
-        data["description"] = product.description or ""
+        data["description"] = localized(product, "description", lang)
     return data
 
 
-def serialize_category(cat) -> dict:
-    return {"id": cat.id, "name": cat.name, "emoji": cat.emoji}
+def serialize_category(cat, lang: str | None = None) -> dict:
+    return {"id": cat.id, "name": localized(cat, "name", lang), "emoji": cat.emoji}
 
 
 def serialize_banner(banner) -> dict:

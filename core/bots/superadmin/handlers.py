@@ -461,12 +461,15 @@ async def _product_card(session: AsyncSession, product, page: int) -> tuple[str,
         price_line = f"💰 <b>{fmt_money(product.price, currency)}</b>"
 
     active = product.is_active and product.deleted_at is None
+    tr_ru = "✅" if (product.name_ru or "").strip() else "➖"
+    tr_en = "✅" if (product.name_en or "").strip() else "➖"
     lines = [
         f"{'🟢' if active else '🔴'} <b>{esc(product.name)}</b>\n",
         price_line,
         f"📦 Qoldiq: <b>{product.stock}</b> dona" + ("  ⚠️ TUGAGAN" if product.stock <= 0 else ""),
         f"🗂 Kategoriya: {cat_name}",
         f"🖼 Rasm: {'✅ bor' if product.image_media_id else '🚫 yo‘q'}",
+        f"🌐 Tarjima: 🇷🇺 {tr_ru} · 🇬🇧 {tr_en}",
         f"🔢 Tartib: {product.sort_order}",
     ]
     if product.description:
@@ -491,8 +494,12 @@ async def product_view(callback: CallbackQuery, session: AsyncSession, state: FS
 
 # Maydon -> (so'rov matni, klaviatura turi). "clear" = bo'shatish mumkin.
 _PRODUCT_FIELD_PROMPTS = {
-    "name": ("✏️ Yangi <b>nom</b>ni yuboring:", "cancel"),
+    "name": ("✏️ Yangi <b>nom</b>ni yuboring (o'zbekcha — asosiy):", "cancel"),
     "desc": ("📝 Yangi <b>tavsif</b>ni yuboring (mijoz mahsulot sahifasida ko'radi):", "clear"),
+    "name_ru": ("🇷🇺 Mahsulot nomini <b>rus tilida</b> yuboring:", "clear"),
+    "name_en": ("🇬🇧 Mahsulot nomini <b>ingliz tilida</b> yuboring:", "clear"),
+    "desc_ru": ("🇷🇺 Mahsulot tavsifini <b>rus tilida</b> yuboring:", "clear"),
+    "desc_en": ("🇬🇧 Mahsulot tavsifini <b>ingliz tilida</b> yuboring:", "clear"),
     "price": ("💰 Yangi <b>narx</b>ni raqamda yuboring:", "cancel"),
     "oldprice": (
         "🏷 <b>Eski narx</b>ni raqamda yuboring — mijozga chegirma sifatida "
@@ -584,6 +591,21 @@ async def product_edit_value(message: Message, session: AsyncSession, state: FSM
         await _finish_product_edit(message, session, state, "Tavsif " + ("o'chirildi." if cleared else "yangilandi."))
         return
 
+    # Tarjimalar. Bo'sh («🗑 Tozalash») bo'lsa NULL bo'ladi va Mini App o'zbek
+    # variantiga qaytadi — mijoz hech qachon bo'sh nom ko'rmaydi.
+    if field in ("name_ru", "name_en", "desc_ru", "desc_en"):
+        column = {"name_ru": "name_ru", "name_en": "name_en",
+                  "desc_ru": "description_ru", "desc_en": "description_en"}[field]
+        limit = 200 if field.startswith("name") else 2000
+        await catalog_service.update_product(session, pid, **{column: "" if cleared else raw[:limit]})
+        label = {"name_ru": "🇷🇺 Nom (RU)", "name_en": "🇬🇧 Nom (EN)",
+                 "desc_ru": "🇷🇺 Tavsif (RU)", "desc_en": "🇬🇧 Tavsif (EN)"}[field]
+        await _finish_product_edit(
+            message, session, state,
+            f"{label} " + ("o'chirildi." if cleared else "saqlandi."),
+        )
+        return
+
     if field in ("price", "stock", "sort", "oldprice"):
         if field == "oldprice" and cleared:
             await catalog_service.update_product(session, pid, old_price=None)
@@ -622,6 +644,44 @@ async def product_edit_value(message: Message, session: AsyncSession, state: FSM
 
     await state.clear()
     await message.answer("Noma'lum maydon.", reply_markup=kb.main_menu())
+
+
+@router.callback_query(F.data.startswith("ptr:"))
+async def product_translations(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    await state.clear()
+    _, pid, page = callback.data.split(":")
+    product = await catalog_service.get_product(session, int(pid))
+    if not product:
+        await callback.answer("Mahsulot topilmadi.", show_alert=True)
+        return
+    text = (
+        f"🌐 <b>Tarjimalar</b> — {esc(product.name)}\n\n"
+        f"🇺🇿 <b>{esc(product.name)}</b> <i>(asosiy)</i>\n"
+        f"🇷🇺 {esc(product.name_ru) or '<i>— kiritilmagan</i>'}\n"
+        f"🇬🇧 {esc(product.name_en) or '<i>— kiritilmagan</i>'}\n\n"
+        "Tarjima kiritilmasa, Mini App o'zbekcha nomni ko'rsatadi."
+    )
+    await _edit(callback, text, kb.product_translations_kb(product, int(page)))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("ctr:"))
+async def category_translations(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    await state.clear()
+    _, cid, page = callback.data.split(":")
+    cat = await catalog_service.get_category(session, int(cid))
+    if not cat:
+        await callback.answer("Kategoriya topilmadi.", show_alert=True)
+        return
+    text = (
+        f"🌐 <b>Tarjimalar</b> — {cat.emoji} {esc(cat.name)}\n\n"
+        f"🇺🇿 <b>{esc(cat.name)}</b> <i>(asosiy)</i>\n"
+        f"🇷🇺 {esc(cat.name_ru) or '<i>— kiritilmagan</i>'}\n"
+        f"🇬🇧 {esc(cat.name_en) or '<i>— kiritilmagan</i>'}\n\n"
+        "Tarjima kiritilmasa, Mini App o'zbekcha nomni ko'rsatadi."
+    )
+    await _edit(callback, text, kb.category_translations_kb(cat, int(page)))
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("pcatm:"))
@@ -705,8 +765,33 @@ async def add_product_name(message: Message, state: FSMContext):
         await message.answer("❗️ Nom kamida 2 belgidan iborat bo'lsin. Qayta kiriting:")
         return
     await state.update_data(name=name[:200])
+    await state.set_state(AddProduct.name_ru)
+    await message.answer(
+        "🇷🇺 Endi mahsulot nomini <b>rus tilida</b> yuboring.\n\n"
+        "<i>Kerak bo'lmasa «⏭ O'tkazib yuborish» — mijoz rus tilida ham "
+        "o'zbekcha nomni ko'radi.</i>",
+        reply_markup=kb.skip_menu(),
+    )
+
+
+@router.message(AddProduct.name_ru, F.text)
+async def add_product_name_ru(message: Message, state: FSMContext):
+    raw = message.text.strip()
+    await state.update_data(name_ru="" if raw == kb.BTN_SKIP else raw[:200])
+    await state.set_state(AddProduct.name_en)
+    await message.answer(
+        "🇬🇧 Endi mahsulot nomini <b>ingliz tilida</b> yuboring "
+        "(yoki «⏭ O'tkazib yuborish»):",
+        reply_markup=kb.skip_menu(),
+    )
+
+
+@router.message(AddProduct.name_en, F.text)
+async def add_product_name_en(message: Message, state: FSMContext):
+    raw = message.text.strip()
+    await state.update_data(name_en="" if raw == kb.BTN_SKIP else raw[:200])
     await state.set_state(AddProduct.price)
-    await message.answer("Narxini kiriting (faqat raqam, so'mda):")
+    await message.answer("Narxini kiriting (faqat raqam, so'mda):", reply_markup=kb.cancel_menu())
 
 
 @router.message(AddProduct.price, F.text)
@@ -764,6 +849,8 @@ async def _finish_product(message, state, session, image_media_id):
     product = await catalog_service.create_product(
         session,
         name=data["name"],
+        name_ru=data.get("name_ru") or None,
+        name_en=data.get("name_en") or None,
         price=data["price"],
         category_id=data.get("category_id"),
         stock=data.get("stock", 0),
@@ -807,9 +894,12 @@ async def categories_list(callback: CallbackQuery, session: AsyncSession, state:
 async def _category_card(session: AsyncSession, cat, page: int):
     total = await catalog_service.count_products(session, category_id=cat.id, only_active=False)
     active = await catalog_service.count_products(session, category_id=cat.id, only_active=True)
+    tr_ru = "✅" if (cat.name_ru or "").strip() else "➖"
+    tr_en = "✅" if (cat.name_en or "").strip() else "➖"
     text = (
         f"{'🟢' if cat.is_active else '🔴'} {cat.emoji} <b>{esc(cat.name)}</b>\n\n"
         f"📦 Mahsulotlar: <b>{total}</b> (faol: {active})\n"
+        f"🌐 Tarjima: 🇷🇺 {tr_ru} · 🇬🇧 {tr_en}\n"
         f"🔢 Tartib: {cat.sort_order}\n"
         f"🆔 <code>{cat.id}</code>\n\n"
         "<i>Nofaol kategoriya Mini App'da ko'rinmaydi.</i>"
@@ -837,13 +927,17 @@ async def category_edit_prompt(callback: CallbackQuery, session: AsyncSession, s
     if not cat:
         await callback.answer("Kategoriya topilmadi.", show_alert=True)
         return
-    prompt = (
-        "✏️ Yangi <b>nom</b>ni yuboring:" if field == "name"
-        else "😀 Yangi <b>emoji</b>ni yuboring (Mini App'da kategoriya yonida ko'rinadi):"
-    )
+    prompts = {
+        "name": ("✏️ Yangi <b>nom</b>ni yuboring (o'zbekcha — asosiy):", "cancel"),
+        "name_ru": ("🇷🇺 Kategoriya nomini <b>rus tilida</b> yuboring:", "clear"),
+        "name_en": ("🇬🇧 Kategoriya nomini <b>ingliz tilida</b> yuboring:", "clear"),
+        "emoji": ("😀 Yangi <b>emoji</b>ni yuboring (Mini App'da kategoriya yonida ko'rinadi):", "cancel"),
+    }
+    prompt, kb_kind = prompts.get(field, ("Yangi qiymatni yuboring:", "cancel"))
     await state.set_state(EditCategory.value)
     await state.update_data(field=field, category_id=cat.id, page=int(page))
-    await callback.message.answer(f"{cat.emoji} <b>{esc(cat.name)}</b>\n\n{prompt}", reply_markup=kb.cancel_menu())
+    markup = kb.clear_menu() if kb_kind == "clear" else kb.cancel_menu()
+    await callback.message.answer(f"{cat.emoji} <b>{esc(cat.name)}</b>\n\n{prompt}", reply_markup=markup)
     await callback.answer()
 
 
@@ -852,12 +946,17 @@ async def category_edit_value(message: Message, session: AsyncSession, state: FS
     data = await state.get_data()
     field, cid, page = data.get("field"), int(data.get("category_id", 0)), int(data.get("page", 1))
     raw = (message.text or "").strip()
+    cleared = raw == kb.BTN_CLEAR
     if field == "name":
         if len(raw) < 2:
             await message.answer("❗️ Nom kamida 2 belgidan iborat bo'lsin. Qayta kiriting:")
             return
         cat = await catalog_service.update_category(session, cid, name=raw)
         note = "Nom yangilandi."
+    elif field in ("name_ru", "name_en"):
+        cat = await catalog_service.update_category(session, cid, **{field: "" if cleared else raw})
+        flag = "🇷🇺" if field == "name_ru" else "🇬🇧"
+        note = f"{flag} Tarjima " + ("o'chirildi." if cleared else "saqlandi.")
     else:
         cat = await catalog_service.update_category(session, cid, emoji=raw[:8])
         note = "Emoji yangilandi."
@@ -936,6 +1035,30 @@ async def add_category_name(message: Message, state: FSMContext):
         await message.answer("❗️ Nom kamida 2 belgidan iborat bo'lsin. Qayta kiriting:")
         return
     await state.update_data(name=name[:120])
+    await state.set_state(AddCategory.name_ru)
+    await message.answer(
+        "🇷🇺 Kategoriya nomini <b>rus tilida</b> yuboring.\n\n"
+        "<i>Kerak bo'lmasa «⏭ O'tkazib yuborish».</i>",
+        reply_markup=kb.skip_menu(),
+    )
+
+
+@router.message(AddCategory.name_ru, F.text)
+async def add_category_name_ru(message: Message, state: FSMContext):
+    raw = message.text.strip()
+    await state.update_data(name_ru="" if raw == kb.BTN_SKIP else raw[:120])
+    await state.set_state(AddCategory.name_en)
+    await message.answer(
+        "🇬🇧 Kategoriya nomini <b>ingliz tilida</b> yuboring "
+        "(yoki «⏭ O'tkazib yuborish»):",
+        reply_markup=kb.skip_menu(),
+    )
+
+
+@router.message(AddCategory.name_en, F.text)
+async def add_category_name_en(message: Message, state: FSMContext):
+    raw = message.text.strip()
+    await state.update_data(name_en="" if raw == kb.BTN_SKIP else raw[:120])
     await state.set_state(AddCategory.emoji)
     await message.answer(
         "Emoji yuboring (masalan 🥛 🧈 🧀 🍦) yoki o'tkazib yuboring:",
@@ -947,7 +1070,13 @@ async def add_category_name(message: Message, state: FSMContext):
 async def add_category_emoji(message: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
     emoji = "🥛" if message.text == kb.BTN_SKIP else message.text.strip()[:8]
-    cat = await catalog_service.create_category(session, name=data["name"], emoji=emoji)
+    cat = await catalog_service.create_category(
+        session,
+        name=data["name"],
+        emoji=emoji,
+        name_ru=data.get("name_ru") or None,
+        name_en=data.get("name_en") or None,
+    )
     await state.clear()
     await message.answer(
         f"✅ Kategoriya qo'shildi: {cat.emoji} {esc(cat.name)}", reply_markup=kb.main_menu()
@@ -998,6 +1127,10 @@ async def settings_group(callback: CallbackQuery):
         else:
             shown = (val[:44] + "…") if len(val) > 44 else (val or "—")
         lines.append(f"• {label}: <code>{esc(shown)}</code>")
+        # Sozlama QAYERDA ko'rinishini eslatib turamiz (ikki rasm uchun muhim).
+        hint = kb.SETTING_HINTS.get(key)
+        if hint:
+            lines.append(f"   <i>{esc(hint)}</i>")
     lines.append("\nO'zgartirish uchun tugmani bosing:")
     await _edit(callback, "\n".join(lines), kb.settings_group_kb(group))
     await callback.answer()

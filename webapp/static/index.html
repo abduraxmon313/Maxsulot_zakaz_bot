@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=22" />
+  <link rel="stylesheet" href="/static/styles.css?v=23" />
 </head>
 <body>
   <!-- Splash: animatsiyali brend belgisi (sut idishi + yaproq).
@@ -45,16 +45,15 @@
             <b class="tb-name" id="shopName">Do'kon</b>
           </div>
         </div>
-        <button class="tb-icon" id="tbCart" aria-label="Savat" data-i18n-aria="cart_title">
-          <span data-ic="cart"></span>
-          <b id="cartBadge" class="badge" hidden>0</b>
+        <!-- Sevimlilar. Savat pastdagi navigatsiyada bo'lgani uchun bu yerda
+             takrorlanmaydi — o'rniga eng foydali yorliq: sevimlilar ro'yxati. -->
+        <button class="tb-icon" id="tbFav" aria-label="Sevimlilar" data-i18n-aria="favorites_title">
+          <span data-ic="heart"></span>
+          <b id="favBadge" class="badge" hidden>0</b>
         </button>
       </header>
 
       <div class="home-scroll">
-        <!-- Premium hero — do'kon qiymat taklifi + ishonch belgilari (JS to'ldiradi) -->
-        <section id="hero" class="hero" hidden></section>
-
         <div class="searchbar">
           <span data-ic="search" class="sb-ic"></span>
           <input type="text" id="searchInput" placeholder="Mahsulot qidirish…" data-i18n-ph="search" autocomplete="off" aria-label="Qidirish" />
@@ -100,6 +99,28 @@
         <button class="btn btn-ghost" id="emptyGoShop" data-i18n="start_shopping">Xaridni boshlash</button>
       </div>
       <div id="cartFooter" class="cart-footer"></div>
+    </section>
+
+    <!-- ═══ FAVORITES ═══ -->
+    <section id="view-favorites" class="view">
+      <!-- Sevimlilar pastdagi navigatsiyada yo'q, shuning uchun bu sahifada
+           orqaga qaytish tugmasi MAJBURIY (aks holda faqat «Asosiy» orqali
+           chiqish mumkin bo'lardi). -->
+      <header class="page-head with-back">
+        <button class="head-back" id="favBack" aria-label="Orqaga"><span data-ic="arrowLeft"></span></button>
+        <div class="head-text">
+          <h1 data-i18n="favorites_title">Sevimlilar</h1>
+          <p class="page-sub" data-i18n="favorites_sub">Yurakcha bosilgan mahsulotlar</p>
+        </div>
+      </header>
+      <div class="home-scroll">
+        <div id="favProducts" class="grid"></div>
+        <div id="emptyFav" class="empty" hidden>
+          <div class="empty-ic"><span data-ic="heart"></span></div>
+          <p data-i18n="no_favorites">Sevimlilar hali bo'sh</p>
+          <button class="btn btn-ghost" id="favGoShop" data-i18n="start_shopping">Xaridni boshlash</button>
+        </div>
+      </div>
     </section>
 
     <!-- ═══ ORDERS ═══ -->
@@ -154,6 +175,6 @@
   </nav>
 
   <div id="toast" class="toast"></div>
-  <script src="/static/app.js?v=22"></script>
+  <script src="/static/app.js?v=23"></script>
 </body>
 </html>
